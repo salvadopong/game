@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3341,21 +3340,507 @@
       resetBall();
       resetPaddles();
       
-            if (/Mobi|Android/i.test(navigator.userAgent)) {
+      // Update game info
+      if (!game.isPracticeMode && !game.isEndlessMode) {
+        document.getElementById('matchInfo').textContent = `${game.currentHalf === 1 ? '1st' : '2nd'} Half | ${game.tournamentStage} | Extra Time: +${game.extraTime}s`;
+      }
+      
+      // Show commentary
+      if (!game.isPracticeMode) {
+        const commentaryElement = document.getElementById('commentary');
+        if (commentaryElement) commentaryElement.style.display = "block";
+        
+        if (game.isEndlessMode) {
+          if (game.enableCommentary) {
+            queueCommentary("WELCOME TO ENDLESS MODE! HOW LONG CAN YOU LAST?", true);
+          }
+        } else {
+          queueCommentary(`WELCOME TO THE ${game.tournamentStage}! ${game.leftPlayer} vs ${game.rightPlayer}!`, true);
+        }
+      } else {
+        const commentaryElement = document.getElementById('commentary');
+        if (commentaryElement) commentaryElement.style.display = "block";
+        queueCommentary("PRACTICE MODE - TRY TO HIT 10 POWER SHOTS!", true);
+      }
+      
+      // Show control buttons
+      document.getElementById('muteButton').style.display = "flex";
+      document.getElementById('pauseButton').style.display = "flex";
+      document.getElementById('fullscreenButton').style.display = "flex";
+      document.getElementById('musicMuteButton').style.display = "flex";
+      document.getElementById('backButton').style.display = "flex";
+      
+      // Show mobile controls if on mobile
+      if (/Mobi|Android/i.test(navigator.userAgent)) {
         const mobileControls = document.getElementById('mobileControls');
         if (mobileControls) mobileControls.style.display = 'flex';
       }
       
-      // Start music again if not muted
-      if (game.soundEnabled && !game.isMusicMuted && game.musicStarted) {
-        playRandomGameMusic();
+      // Show D-Pad controls if enabled
+      if (game.dpadEnabled) {
+        document.getElementById('dpadControls').style.display = 'block';
+        document.getElementById('dpadControlsRight').style.display = 'block';
       }
       
-      queueCommentary("RETURNING TO MENU", true, true);
+      // Start music
+      game.musicStarted = true;
+      if (game.soundEnabled && !game.isMusicMuted) {
+        playRandomStartMusic();
+      }
+      
+      // Start game loop
+      game.gameStarted = true;
+      game.lastFrameTime = performance.now();
+      game.startTime = Date.now();
+      
+      // Start timer if not practice or endless mode
+      if (!game.isPracticeMode && !game.isEndlessMode) {
+        startTimer();
+      }
+      
+      // Start countdown
+      startCountdown();
+      
+      // Start game loop
+      requestAnimationFrame(gameLoop);
+    }
+
+    // MISSING FUNCTIONS - ADDED BELOW
+
+    function toggleMute() {
+      game.isMuted = !game.isMuted;
+      const muteButton = document.getElementById('muteButton');
+      if (muteButton) {
+        muteButton.textContent = game.isMuted ? "🔇" : "🔊";
+      }
+      playSelectSound();
+    }
+
+    function toggleMusicMute() {
+      game.isMusicMuted = !game.isMusicMuted;
+      const musicMuteButton = document.getElementById('musicMuteButton');
+      if (musicMuteButton) {
+        musicMuteButton.textContent = game.isMusicMuted ? "🔇" : "🎵";
+      }
+      
+      if (game.isMusicMuted) {
+        backgroundMusic.pause();
+      } else if (game.soundEnabled && game.musicStarted) {
+        playRandomGameMusic();
+      }
+      playSelectSound();
+    }
+
+    function togglePause() {
+      if (!game.gameStarted || game.halftimeActive || game.countdownActive) return;
+      
+      game.isPaused = !game.isPaused;
+      const pauseButton = document.getElementById('pauseButton');
+      
+      if (pauseButton) {
+        pauseButton.textContent = game.isPaused ? "▶️" : "⏸️";
+      }
+      
+      if (game.isPaused) {
+        // Store current game state
+        game.pausedBallState = { ...game.ball };
+        game.pausedPaddleState = {
+          leftPaddle: { ...game.leftPaddle },
+          rightPaddle: { ...game.rightPaddle }
+        };
+        
+        // Stop timer
+        if (game.timerInterval) {
+          clearInterval(game.timerInterval);
+          game.timerInterval = null;
+        }
+        
+        // Show pause screen
+        document.getElementById('pauseScreen').style.display = 'flex';
+        
+        // Stop music
+        backgroundMusic.pause();
+      } else {
+        // Restore game state
+        if (game.pausedBallState) {
+          Object.assign(game.ball, game.pausedBallState);
+        }
+        if (game.pausedPaddleState) {
+          Object.assign(game.leftPaddle, game.pausedPaddleState.leftPaddle);
+          Object.assign(game.rightPaddle, game.pausedPaddleState.rightPaddle);
+        }
+        
+        // Resume timer if needed
+        if (!game.isPracticeMode && !game.isEndlessMode && !game.timerInterval) {
+          startTimer();
+        }
+        
+        // Hide pause screen
+        document.getElementById('pauseScreen').style.display = 'none';
+        
+        // Resume music
+        if (game.soundEnabled && !game.isMusicMuted && game.musicStarted) {
+          playRandomGameMusic();
+        }
+      }
+      playSelectSound();
+    }
+
+    function returnToMenu() {
+      // Stop all intervals
+      if (game.timerInterval) {
+        clearInterval(game.timerInterval);
+        game.timerInterval = null;
+      }
+      
+      if (game.countdownInterval) {
+        clearInterval(game.countdownInterval);
+        game.countdownInterval = null;
+      }
+      
+      if (game.halftimeInterval) {
+        clearInterval(game.halftimeInterval);
+        game.halftimeInterval = null;
+      }
+      
+      if (game.leftChargeInterval) {
+        clearInterval(game.leftChargeInterval);
+        game.leftChargeInterval = null;
+      }
+      
+      if (game.rightChargeInterval) {
+        clearInterval(game.rightChargeInterval);
+        game.rightChargeInterval = null;
+      }
+      
+      // Reset game state
+      game.gameStarted = false;
+      game.isPaused = false;
+      game.halftimeActive = false;
+      game.countdownActive = false;
+      game.isPracticeMode = false;
+      game.isEndlessMode = false;
+      
+      // Stop music
+      backgroundMusic.pause();
+      game.musicStarted = false;
+      
+      // Hide game elements
+      document.getElementById('leftScore').style.display = 'none';
+      document.getElementById('rightScore').style.display = 'none';
+      document.getElementById('timer').style.display = 'none';
+      document.getElementById('bonusPoints').style.display = 'none';
+      document.getElementById('matchInfo').style.display = 'none';
+      document.getElementById('commentary').style.display = 'none';
+      document.getElementById('pauseScreen').style.display = 'none';
+      document.getElementById('endScreen').style.display = 'none';
+      document.getElementById('gameOverScreen').style.display = 'none';
+      
+      // Hide control buttons
+      document.getElementById('muteButton').style.display = 'none';
+      document.getElementById('pauseButton').style.display = 'none';
+      document.getElementById('fullscreenButton').style.display = 'none';
+      document.getElementById('musicMuteButton').style.display = 'none';
+      document.getElementById('backButton').style.display = 'none';
+      document.getElementById('whatsNewButton').style.display = 'block';
+      
+      // Hide mobile controls
+      document.getElementById('mobileControls').style.display = 'none';
+      document.getElementById('dpadControls').style.display = 'none';
+      document.getElementById('dpadControlsRight').style.display = 'none';
+      
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Show title screen
+      document.getElementById('titleScreen').style.display = 'flex';
+      
+      playSelectSound();
+    }
+
+    function startCountdown() {
+      game.countdownActive = true;
+      const countdownElement = document.getElementById('countdown');
+      const goTextElement = document.getElementById('goText');
+      
+      if (countdownElement) {
+        countdownElement.style.display = 'flex';
+        countdownElement.textContent = '3';
+      }
+      
+      let count = 3;
+      game.countdownInterval = setInterval(() => {
+        if (countdownElement) {
+          if (count > 1) {
+            countdownElement.textContent = count - 1;
+            playSelectSound();
+          } else if (count === 1) {
+            countdownElement.style.display = 'none';
+            if (goTextElement) {
+              goTextElement.style.display = 'flex';
+              playSelectSound();
+            }
+          } else {
+            if (goTextElement) {
+              goTextElement.style.display = 'none';
+            }
+            clearInterval(game.countdownInterval);
+            game.countdownActive = false;
+            
+            // Start the game after countdown
+            if (!game.isPaused) {
+              game.gameStarted = true;
+            }
+          }
+        }
+        count--;
+      }, 1000);
+    }
+
+    function startTimer() {
+      if (game.timerInterval) {
+        clearInterval(game.timerInterval);
+      }
+      
+      game.timerInterval = setInterval(() => {
+        if (!game.isPaused && !game.halftimeActive && game.gameStarted) {
+          game.remainingTime--;
+          
+          // Update timer display
+          const minutes = Math.floor(game.remainingTime / 60);
+          const seconds = game.remainingTime % 60;
+          const milliseconds = 0;
+          
+          document.getElementById('timer').textContent = 
+            `${minutes}:${seconds < 10 ? '0' : ''}${seconds}.${milliseconds < 10 ? '0' : ''}${milliseconds}${milliseconds < 100 ? '0' : ''}`;
+          
+          // Check for last 10 seconds
+          if (game.remainingTime <= 10 && !game.last10Seconds) {
+            game.last10Seconds = true;
+            if (!game.hasAnnounced10) {
+              queueCommentary("LAST 10 SECONDS!", true, true);
+              game.hasAnnounced10 = true;
+            }
+          }
+          
+          // Check for halftime
+          if (game.remainingTime <= 0) {
+            if (game.currentHalf === 1) {
+              startHalftime();
+            } else {
+              startOvertime();
+            }
+          }
+        }
+      }, 1000);
+    }
+
+    function startHalftime() {
+      game.halftimeActive = true;
+      clearInterval(game.timerInterval);
+      
+      const halftimeScreen = document.getElementById('halftimeScreen');
+      if (halftimeScreen) {
+        halftimeScreen.style.display = 'flex';
+        halftimeScreen.textContent = 'HALF TIME!';
+      }
+      
+      // Store scores for halftime display
+      const leftScore = game.leftPaddle.score;
+      const rightScore = game.rightPaddle.score;
+      
+      game.halftimeInterval = setTimeout(() => {
+        game.halftimeActive = false;
+        game.currentHalf = 2;
+        game.remainingTime = HALF_TIME;
+        game.hasAnnounced30 = false;
+        game.hasAnnounced10 = false;
+        game.last10Seconds = false;
+        
+        // Update match info
+        document.getElementById('matchInfo').textContent = `2nd Half | ${game.tournamentStage} | Extra Time: +${game.extraTime}s`;
+        
+        // Reset ball and paddles
+        resetBall();
+        resetPaddles();
+        
+        // Hide halftime screen
+        if (halftimeScreen) {
+          halftimeScreen.style.display = 'none';
+        }
+        
+        // Start second half countdown
+        startCountdown();
+        
+        // Start timer again
+        setTimeout(() => {
+          startTimer();
+        }, 4000);
+        
+        // Commentary for second half
+        queueCommentary(`SECOND HALF! ${game.leftPlayer} ${leftScore} - ${rightScore} ${game.rightPlayer}`, true);
+      }, HALF_TIME_BREAK * 1000);
+    }
+
+    function startOvertime() {
+      game.extraTime += OVERTIME_TIME;
+      game.remainingTime = OVERTIME_TIME;
+      playETSound();
+      
+      queueCommentary("EXTRA TIME!", true, true);
+      
+      // Update match info
+      document.getElementById('matchInfo').textContent = `Extra Time | ${game.tournamentStage} | +${game.extraTime}s`;
+      
+      // Reset ball and paddles
+      resetBall();
+      resetPaddles();
+    }
+
+    function queueCommentary(text, urgent = false, useTTS = false) {
+      // Skip commentary in practice mode or if disabled in endless mode
+      if (game.isPracticeMode || (game.isEndlessMode && !game.enableCommentary)) {
+        return;
+      }
+      
+      if (urgent) {
+        game.commentaryQueue.unshift(text);
+      } else {
+        game.commentaryQueue.push(text);
+      }
+      
+      if (!game.isSpeaking) {
+        speakCommentary();
+      }
+    }
+
+    function speakCommentary() {
+      if (game.commentaryQueue.length === 0 || game.isSpeaking) {
+        game.isSpeaking = false;
+        return;
+      }
+      
+      game.isSpeaking = true;
+      const text = game.commentaryQueue.shift();
+      const commentaryElement = document.getElementById('commentary');
+      
+      if (commentaryElement) {
+        commentaryElement.textContent = text;
+        commentaryElement.style.opacity = '1';
+        
+        // Clear any existing timeout
+        if (game.currentUtterance) {
+          speechSynthesis.cancel();
+        }
+        
+        // Use text-to-speech if available and enabled
+        if ('speechSynthesis' in window && game.soundEnabled && !game.isMuted) {
+          game.currentUtterance = new SpeechSynthesisUtterance(text);
+          game.currentUtterance.rate = 1.2;
+          game.currentUtterance.pitch = 1.1;
+          game.currentUtterance.volume = 0.7;
+          speechSynthesis.speak(game.currentUtterance);
+          
+          game.currentUtterance.onend = function() {
+            setTimeout(() => {
+              commentaryElement.style.opacity = '0';
+              setTimeout(() => {
+                game.isSpeaking = false;
+                speakCommentary();
+              }, 500);
+            }, 2000);
+          };
+        } else {
+          // Fallback to just displaying text
+          setTimeout(() => {
+            commentaryElement.style.opacity = '0';
+            setTimeout(() => {
+              game.isSpeaking = false;
+              speakCommentary();
+            }, 500);
+          }, 3000);
+        }
+      }
+    }
+
+    function endGame() {
+      // Stop all intervals
+      if (game.timerInterval) {
+        clearInterval(game.timerInterval);
+        game.timerInterval = null;
+      }
+      
+      if (game.leftChargeInterval) {
+        clearInterval(game.leftChargeInterval);
+        game.leftChargeInterval = null;
+      }
+      
+      if (game.rightChargeInterval) {
+        clearInterval(game.rightChargeInterval);
+        game.rightChargeInterval = null;
+      }
+      
+      // Stop game loop
+      game.gameStarted = false;
+      
+      // Determine winner
+      const winningThreshold = WINNING_SCORE + game.bonusPoints;
+      const winner = game.leftPaddle.score >= winningThreshold ? game.leftPlayer : game.rightPlayer;
+      const loser = game.leftPaddle.score >= winningThreshold ? game.rightPlayer : game.leftPlayer;
+      const winnerScore = game.leftPaddle.score >= winningThreshold ? game.leftPaddle.score : game.rightPaddle.score;
+      const loserScore = game.leftPaddle.score >= winningThreshold ? game.rightPaddle.score : game.leftPaddle.score;
+      
+      // Play game over sound
+      playGameOverSound();
+      
+      // Create confetti for winner
+      createConfetti();
+      
+      // Save to leaderboards
+      if (!game.isPracticeMode && !game.isEndlessMode) {
+        const gameData = {
+          player1: game.leftPlayer,
+          player2: game.rightPlayer,
+          score1: game.leftPaddle.score,
+          score2: game.rightPaddle.score,
+          stage: game.tournamentStage,
+          timestamp: Date.now()
+        };
+        
+        // Save to recent plays
+        saveToLeaderboard('recent', gameData);
+        
+        // Save to best wins if player won
+        if (game.leftPlayer === winner) {
+          saveToLeaderboard('best', gameData);
+        }
+        
+        // Save to bot champions if playing against bot
+        if (game.rightPlayer === "BOT" && game.leftPlayer === winner) {
+          gameData.difficulty = game.aiDifficulty;
+          saveToLeaderboard('bot', gameData);
+        }
+      }
+      
+      // Show end screen
+      const endScreen = document.getElementById('endScreen');
+      const endMessage = document.getElementById('endMessage');
+      
+      if (endScreen && endMessage) {
+        if (game.isPracticeMode) {
+          endMessage.textContent = `PRACTICE COMPLETE!`;
+        } else if (game.isEndlessMode) {
+          endMessage.textContent = `ENDLESS MODE: ${winnerScore}-${loserScore}`;
+        } else {
+          endMessage.textContent = `${winner} WINS ${winnerScore}-${loserScore}!`;
+          queueCommentary(`AND THE WINNER IS ${winner}! CONGRATULATIONS!`, true, true);
+        }
+        endScreen.style.display = 'flex';
+      }
     }
 
     // Initialize the game when the DOM is loaded
     document.addEventListener('DOMContentLoaded', initGame);
-    </script>
+  </script>
 </body>
 </html>
