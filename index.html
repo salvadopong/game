@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>🏆 PONG CHAMPIONSHIP 2.8 🏆</title>
+  <title>🏆 PONG CHAMPIONSHIP 2.9 🏆</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
@@ -1020,7 +1020,7 @@
 <body>
   <!-- Intro Animation Screen -->
   <div id="introAnimation">
-    <div id="introText">PONG CHAMPIONSHIP 2.8</div>
+    <div id="introText">PONG CHAMPIONSHIP 2.9</div>
     <button id="startButton">START</button>
   </div>
 
@@ -1033,7 +1033,7 @@
     <div id="timer">1:30.000</div>
     <div id="bonusPoints"></div>
     <div id="matchInfo"></div>
-    <div id="commentary">WELCOME TO THE PONG CHAMPIONSHIP 2.8!</div>
+    <div id="commentary">WELCOME TO THE PONG CHAMPIONSHIP 2.9!</div>
     
     <!-- Power charge bars - now properly separated -->
     <div id="leftChargeContainer" class="paddle-charge-container">
@@ -1051,7 +1051,7 @@
     <button id="fullscreenButton" class="control-btn">⛶</button>
     <button id="musicMuteButton" class="control-btn">🎵</button>
     <button id="backButton" class="control-btn" style="display: none;">↩️</button>
-    <button id="whatsNewButton" style="display: none;">ℹ️ What's New in 2.8</button>
+    <button id="whatsNewButton" style="display: none;">ℹ️ What's New in 2.9</button>
     
     <div id="mobileControls" style="display: none;">
       <div class="mobile-paddle-controls">
@@ -1095,7 +1095,7 @@
     </div>
 
     <div id="titleScreen" class="screen">
-      <h1>🏆 PONG CHAMPIONSHIP 2.8 🏆</h1>
+      <h1>🏆 PONG CHAMPIONSHIP 2.9 🏆</h1>
       <button class="btn-championship" id="twoPlayerButton">2 PLAYERS</button>
       <button class="btn-championship" id="singlePlayerButton">1 PLAYER VS BOT</button>
       <button class="btn-championship" id="fourPlayerButton">4 PLAYERS</button>
@@ -1147,17 +1147,16 @@
   <!-- Whats New Modal -->
   <div id="whatsNewModal">
     <div id="whatsNewContent">
-      <h2>What's New in Pong Championship 2.8</h2>
+      <h2>What's New in Pong Championship 2.9</h2>
       <ul>
-        <li>Improved performance for iPad devices</li>
-        <li>Fixed ball visibility issue at game start</li>
-        <li>Practice mode now uses bot for left paddle</li>
-        <li>Added proper pause functionality for all game elements</li>
-        <li>Removed D-Pad controller button for cleaner UI</li>
-        <li>Fixed commentary option in Endless Mode</li>
-        <li>Practice mode redirects to title screen after completion</li>
-        <li>Removed paddle movement sound for less noise</li>
-        <li>Optimized graphics for smoother performance</li>
+        <li><strong>IMPROVED COUNTDOWN:</strong> Ball only released after "GO!" appears</li>
+        <li><strong>FIXED POWER SHOT:</strong> Power shots now properly increase ball speed</li>
+        <li><strong>ENHANCED COMMENTARY:</strong> Commentary stops after game ends and interrupts previous speech</li>
+        <li><strong>PRACTICE MODE FIX:</strong> Right paddle is now AI-controlled in practice mode</li>
+        <li><strong>MILLISECONDS TIMER:</strong> Timer now shows milliseconds counting down</li>
+        <li><strong>HALFTIME FIX:</strong> Game fully pauses during halftime with proper commentary</li>
+        <li><strong>END GAME FIX:</strong> Game completely stops after match ends</li>
+        <li><strong>TOURNAMENT COMMENTARY:</strong> Special commentary for tournament finals</li>
       </ul>
       <button class="modal-btn" id="closeWhatsNew">CLOSE</button>
     </div>
@@ -1478,10 +1477,14 @@
       fireTrails: [],
       confettiElements: [],
       lastPaddleSoundTime: 0,
-      paddleSoundInterval: 200, // ms between paddle movement sounds
-      gameMode: null, // Tracks current game mode for D-Pad logic
-      pausedBallState: null, // Store ball state when paused
-      pausedPaddleState: null // Store paddle state when paused
+      paddleSoundInterval: 200,
+      gameMode: null,
+      pausedBallState: null,
+      pausedPaddleState: null,
+      gameActive: false, // NEW: Track if game is actively playing (after countdown)
+      halftimeBreakActive: false, // NEW: Track halftime break
+      milliseconds: 0, // NEW: Track milliseconds
+      lastTimerUpdate: 0 // NEW: For tracking timer updates
     };
 
     // Commentary phrases
@@ -1575,7 +1578,7 @@
       }, 300);
       
       startButton.addEventListener('click', () => {
-        createConfetti(true); // Confetti on start
+        createConfetti(true);
         document.getElementById('introAnimation').style.display = 'none';
         document.getElementById('titleScreen').style.display = 'flex';
         
@@ -2092,7 +2095,7 @@
     }
 
     function loadAudioFiles() {
-      // Preload sound effects (paddle.wav removed as requested)
+      // Preload sound effects
       scoreSound.src = 'score.mp3';
       scoreSound1.src = 'score1.mp3';
       scoreSound2.src = 'score2.mp3';
@@ -2195,12 +2198,12 @@
       game.ball.y = canvas.height / 2;
       game.ball.speed = game.isFourPlayer ? FOUR_PLAYER_BALL_SPEED : INITIAL_BALL_SPEED;
       game.ball.originalSpeed = game.ball.speed;
-      game.ball.dx = Math.random() > 0.5 ? game.ball.speed * 0.6 : -game.ball.speed * 0.6;
-      game.ball.dy = (Math.random() * 2 - 1) * game.ball.speed * 0.6;
+      game.ball.dx = 0; // Start with zero velocity during countdown
+      game.ball.dy = 0;
       
       // Reset smash counter
       game.smashCounter = 0;
-      game.smashTarget = Math.floor(Math.random() * 5) + 3; // 3-7 hits
+      game.smashTarget = Math.floor(Math.random() * 5) + 3;
       
       // Set ball color to white
       game.ballColor = 'white';
@@ -2208,6 +2211,12 @@
       // Make sure ball is visible
       game.ball.x = Math.max(game.ballRadius, Math.min(canvas.width - game.ballRadius, game.ball.x));
       game.ball.y = Math.max(game.ballRadius, Math.min(canvas.height - game.ballRadius, game.ball.y));
+    }
+
+    function startBallAfterCountdown() {
+      // Set random direction for the ball after countdown
+      game.ball.dx = Math.random() > 0.5 ? game.ball.speed * 0.6 : -game.ball.speed * 0.6;
+      game.ball.dy = (Math.random() * 2 - 1) * game.ball.speed * 0.6;
     }
 
     function resetPaddles() {
@@ -2499,7 +2508,7 @@
 
     // Game loop functions
     function gameLoop(timestamp) {
-      if (!game.gameStarted || game.isPaused || game.halftimeActive) {
+      if (!game.gameStarted || game.isPaused || game.halftimeActive || !game.gameActive) {
         requestAnimationFrame(gameLoop);
         return;
       }
@@ -2524,7 +2533,7 @@
     }
 
     function updateBall(deltaTime) {
-      if (game.isPaused || game.halftimeActive) return;
+      if (game.isPaused || game.halftimeActive || !game.gameActive) return;
       
       // Normalize speed based on frame rate
       const speedFactor = deltaTime / 16; // 16ms is ~60fps
@@ -2550,10 +2559,10 @@
     }
 
     function updatePaddles(deltaTime) {
-      if (game.isPaused || game.halftimeActive) return;
+      if (game.isPaused || game.halftimeActive || !game.gameActive) return;
 
       // Normalize speed based on frame rate
-      const speedFactor = deltaTime / 16; // 16ms is ~60fps
+      const speedFactor = deltaTime / 16;
       const paddleSpeed = PADDLE_SPEED * speedFactor;
 
       // Mobile controls
@@ -2580,7 +2589,7 @@
 
       // Keyboard controls
       if (!game.isFourPlayer) {
-        if (game.isLocalMultiplayer || game.isPracticeMode || (game.isEndlessMode && !game.opponentIsBot)) {
+        if (game.isLocalMultiplayer || (game.isEndlessMode && !game.opponentIsBot)) {
           if (game.keysPressed['w'] || game.keysPressed['W']) {
             game.leftPaddle.y -= paddleSpeed;
           }
@@ -2594,7 +2603,7 @@
             game.rightPaddle.y += paddleSpeed;
           }
         } else {
-          // Player controls
+          // Player controls (including practice mode)
           if (game.keysPressed['w'] || game.keysPressed['W']) {
             game.leftPaddle.y -= paddleSpeed;
           }
@@ -2602,32 +2611,34 @@
             game.leftPaddle.y += paddleSpeed;
           }
           
-          // AI for right paddle in single player or endless mode
-          const paddleCenter = game.rightPaddle.y + game.paddleHeight / 2;
-          const predictedBallY = game.ball.y + (game.ball.dy * (canvas.width - game.ball.x) / Math.abs(game.ball.dx));
-          
-          // Adjust AI difficulty
-          let reactionSpeed;
-          switch(game.aiDifficulty) {
-            case 'easy':
-              reactionSpeed = 0.5 * (1 + Math.random() * 0.3 - 0.15); // Slower and more random
-              break;
-            case 'hard':
-              reactionSpeed = 0.9 * (1 + Math.random() * 0.1 - 0.05); // Faster and more precise
-              break;
-            default: // medium
-              reactionSpeed = 0.7 * (1 + Math.random() * 0.2 - 0.1);
-          }
-          
-          if (paddleCenter < predictedBallY - 15) {
-            game.rightPaddle.y += paddleSpeed * reactionSpeed;
-          } else if (paddleCenter > predictedBallY + 15) {
-            game.rightPaddle.y -= paddleSpeed * reactionSpeed;
-          }
-          
-          // AI power shot
-          if (!game.rightCharged && game.rightCharge >= 100 && Math.random() < 0.01) {
-            activateRightPowerShot();
+          // AI for right paddle in single player, practice, or endless mode
+          if (game.rightPlayer === "BOT" || game.isPracticeMode) {
+            const paddleCenter = game.rightPaddle.y + game.paddleHeight / 2;
+            const predictedBallY = game.ball.y + (game.ball.dy * (canvas.width - game.ball.x) / Math.abs(game.ball.dx || 1));
+            
+            // Adjust AI difficulty
+            let reactionSpeed;
+            switch(game.aiDifficulty) {
+              case 'easy':
+                reactionSpeed = 0.5 * (1 + Math.random() * 0.3 - 0.15);
+                break;
+              case 'hard':
+                reactionSpeed = 0.9 * (1 + Math.random() * 0.1 - 0.05);
+                break;
+              default: // medium
+                reactionSpeed = 0.7 * (1 + Math.random() * 0.2 - 0.1);
+            }
+            
+            if (paddleCenter < predictedBallY - 15) {
+              game.rightPaddle.y += paddleSpeed * reactionSpeed;
+            } else if (paddleCenter > predictedBallY + 15) {
+              game.rightPaddle.y -= paddleSpeed * reactionSpeed;
+            }
+            
+            // AI power shot (only in non-practice modes)
+            if (!game.isPracticeMode && !game.rightCharged && game.rightCharge >= 100 && Math.random() < 0.01) {
+              activateRightPowerShot();
+            }
           }
         }
       } else {
@@ -2662,7 +2673,7 @@
     }
 
     function checkCollisions() {
-      if (game.isPaused || game.halftimeActive) return;
+      if (game.isPaused || game.halftimeActive || !game.gameActive) return;
       
       const paddleHeight = game.isFourPlayer ? game.fourPlayerPaddleHeight : game.paddleHeight;
 
@@ -2674,7 +2685,7 @@
             game.ball.y < game.leftPaddle.y + paddleHeight) {
           const angle = getBallAngle(game.leftPaddle.y, game.ball.y, paddleHeight);
           
-          // Check for power shot
+          // Check for power shot - FIXED: Now properly applies speed multiplier
           if (game.leftCharged || game.last10Seconds) {
             game.ball.dx = Math.abs(Math.cos(angle)) * game.ball.speed * SMASH_SPEED_MULTIPLIER;
             game.ball.dy = Math.sin(angle) * game.ball.speed * SMASH_SPEED_MULTIPLIER;
@@ -2716,7 +2727,7 @@
             game.ball.y < game.rightPaddle.y + paddleHeight) {
           const angle = getBallAngle(game.rightPaddle.y, game.ball.y, paddleHeight);
           
-          // Check for power shot
+          // Check for power shot - FIXED: Now properly applies speed multiplier
           if (game.rightCharged || game.last10Seconds) {
             game.ball.dx = -Math.abs(Math.cos(angle)) * game.ball.speed * SMASH_SPEED_MULTIPLIER;
             game.ball.dy = Math.sin(angle) * game.ball.speed * SMASH_SPEED_MULTIPLIER;
@@ -3254,6 +3265,7 @@
 
     function startGame() {
       game.isPaused = false;
+      game.gameActive = false; // Game not active until countdown finishes
       game.leftPaddle.score = 0;
       game.rightPaddle.score = 0;
       game.remainingTime = HALF_TIME;
@@ -3272,6 +3284,8 @@
       game.particles = [];
       game.lastFrameTime = 0;
       game.practiceWins = 0;
+      game.milliseconds = 0; // Reset milliseconds
+      game.lastTimerUpdate = Date.now(); // Initialize timer
       
       // Reset charge bars
       game.leftCharge = 0;
@@ -3398,14 +3412,12 @@
         startTimer();
       }
       
-      // Start countdown
+      // Start countdown - ball won't move until countdown finishes
       startCountdown();
       
       // Start game loop
       requestAnimationFrame(gameLoop);
     }
-
-    // MISSING FUNCTIONS - ADDED BELOW
 
     function toggleMute() {
       game.isMuted = !game.isMuted;
@@ -3515,15 +3527,17 @@
       
       // Reset game state
       game.gameStarted = false;
+      game.gameActive = false;
       game.isPaused = false;
       game.halftimeActive = false;
       game.countdownActive = false;
       game.isPracticeMode = false;
       game.isEndlessMode = false;
       
-      // Stop music
+      // Stop music and commentary
       backgroundMusic.pause();
       game.musicStarted = false;
+      stopCommentary();
       
       // Hide game elements
       document.getElementById('leftScore').style.display = 'none';
@@ -3535,6 +3549,7 @@
       document.getElementById('pauseScreen').style.display = 'none';
       document.getElementById('endScreen').style.display = 'none';
       document.getElementById('gameOverScreen').style.display = 'none';
+      document.getElementById('halftimeScreen').style.display = 'none';
       
       // Hide control buttons
       document.getElementById('muteButton').style.display = 'none';
@@ -3560,6 +3575,7 @@
 
     function startCountdown() {
       game.countdownActive = true;
+      game.gameActive = false; // Game not active during countdown
       const countdownElement = document.getElementById('countdown');
       const goTextElement = document.getElementById('goText');
       
@@ -3586,6 +3602,10 @@
             }
             clearInterval(game.countdownInterval);
             game.countdownActive = false;
+            game.gameActive = true; // Game is now active!
+            
+            // Start the ball movement after countdown
+            startBallAfterCountdown();
             
             // Start the game after countdown
             if (!game.isPaused) {
@@ -3602,17 +3622,31 @@
         clearInterval(game.timerInterval);
       }
       
+      game.lastTimerUpdate = Date.now();
+      game.milliseconds = 0;
+      
       game.timerInterval = setInterval(() => {
-        if (!game.isPaused && !game.halftimeActive && game.gameStarted) {
-          game.remainingTime--;
+        if (!game.isPaused && !game.halftimeActive && game.gameActive) {
+          const now = Date.now();
+          const delta = now - game.lastTimerUpdate;
+          game.lastTimerUpdate = now;
           
-          // Update timer display
+          // Update milliseconds
+          game.milliseconds -= delta;
+          
+          // When milliseconds go below 0, subtract seconds
+          while (game.milliseconds <= 0 && game.remainingTime > 0) {
+            game.milliseconds += 1000;
+            game.remainingTime--;
+          }
+          
+          // Update timer display with milliseconds
           const minutes = Math.floor(game.remainingTime / 60);
           const seconds = game.remainingTime % 60;
-          const milliseconds = 0;
+          const ms = Math.max(0, Math.floor(game.milliseconds / 10));
           
           document.getElementById('timer').textContent = 
-            `${minutes}:${seconds < 10 ? '0' : ''}${seconds}.${milliseconds < 10 ? '0' : ''}${milliseconds}${milliseconds < 100 ? '0' : ''}`;
+            `${minutes}:${seconds < 10 ? '0' : ''}${seconds}.${ms < 10 ? '0' : ''}${ms}${ms < 100 ? '0' : ''}`;
           
           // Check for last 10 seconds
           if (game.remainingTime <= 10 && !game.last10Seconds) {
@@ -3624,7 +3658,7 @@
           }
           
           // Check for halftime
-          if (game.remainingTime <= 0) {
+          if (game.remainingTime <= 0 && game.milliseconds <= 0) {
             if (game.currentHalf === 1) {
               startHalftime();
             } else {
@@ -3632,11 +3666,12 @@
             }
           }
         }
-      }, 1000);
+      }, 16); // Update every frame for smooth milliseconds
     }
 
     function startHalftime() {
       game.halftimeActive = true;
+      game.gameActive = false; // Pause game during halftime
       clearInterval(game.timerInterval);
       
       const halftimeScreen = document.getElementById('halftimeScreen');
@@ -3649,10 +3684,20 @@
       const leftScore = game.leftPaddle.score;
       const rightScore = game.rightPaddle.score;
       
+      // Stop ball movement
+      const ballDx = game.ball.dx;
+      const ballDy = game.ball.dy;
+      game.ball.dx = 0;
+      game.ball.dy = 0;
+      
+      // Halftime commentary
+      queueCommentary("WHAT A HALF THAT WAS!", true, true);
+      
       game.halftimeInterval = setTimeout(() => {
         game.halftimeActive = false;
         game.currentHalf = 2;
         game.remainingTime = HALF_TIME;
+        game.milliseconds = 0;
         game.hasAnnounced30 = false;
         game.hasAnnounced10 = false;
         game.last10Seconds = false;
@@ -3672,7 +3717,7 @@
         // Start second half countdown
         startCountdown();
         
-        // Start timer again
+        // Start timer again after countdown
         setTimeout(() => {
           startTimer();
         }, 4000);
@@ -3685,6 +3730,7 @@
     function startOvertime() {
       game.extraTime += OVERTIME_TIME;
       game.remainingTime = OVERTIME_TIME;
+      game.milliseconds = 0;
       playETSound();
       
       queueCommentary("EXTRA TIME!", true, true);
@@ -3695,12 +3741,26 @@
       // Reset ball and paddles
       resetBall();
       resetPaddles();
+      
+      // Start countdown for overtime
+      startCountdown();
+      
+      // Start timer after countdown
+      setTimeout(() => {
+        startTimer();
+      }, 4000);
     }
 
     function queueCommentary(text, urgent = false, useTTS = false) {
       // Skip commentary in practice mode or if disabled in endless mode
       if (game.isPracticeMode || (game.isEndlessMode && !game.enableCommentary)) {
         return;
+      }
+      
+      // IMPROVEMENT #4: Clear previous commentary
+      if (urgent) {
+        game.commentaryQueue = []; // Clear all previous commentary
+        stopCommentary(); // Stop any ongoing speech
       }
       
       if (urgent) {
@@ -3711,6 +3771,22 @@
       
       if (!game.isSpeaking) {
         speakCommentary();
+      }
+    }
+
+    function stopCommentary() {
+      // IMPROVEMENT #4: Stop any ongoing speech
+      if (game.currentUtterance) {
+        speechSynthesis.cancel();
+        game.currentUtterance = null;
+      }
+      game.isSpeaking = false;
+      game.commentaryQueue = [];
+      
+      // Fade out commentary display
+      const commentaryElement = document.getElementById('commentary');
+      if (commentaryElement) {
+        commentaryElement.style.opacity = '0';
       }
     }
 
@@ -3750,6 +3826,11 @@
               }, 500);
             }, 2000);
           };
+          
+          game.currentUtterance.onerror = function() {
+            game.isSpeaking = false;
+            speakCommentary();
+          };
         } else {
           // Fallback to just displaying text
           setTimeout(() => {
@@ -3780,8 +3861,9 @@
         game.rightChargeInterval = null;
       }
       
-      // Stop game loop
+      // Stop game loop and commentary
       game.gameStarted = false;
+      game.gameActive = false;
       
       // Determine winner
       const winningThreshold = WINNING_SCORE + game.bonusPoints;
@@ -3793,8 +3875,23 @@
       // Play game over sound
       playGameOverSound();
       
+      // Stop music
+      backgroundMusic.pause();
+      
       // Create confetti for winner
       createConfetti();
+      
+      // IMPROVEMENT #3: Special commentary for tournament winner
+      let victoryMessage;
+      if (game.tournamentStage === "Finals") {
+        victoryMessage = `${winner} HAS WON THE TOURNAMENT!`;
+      } else {
+        victoryMessage = `${winner} HAS WON THE GAME!`;
+      }
+      
+      // Queue final commentary
+      stopCommentary(); // Stop any ongoing commentary
+      queueCommentary(victoryMessage, true, true);
       
       // Save to leaderboards
       if (!game.isPracticeMode && !game.isEndlessMode) {
@@ -3833,7 +3930,6 @@
           endMessage.textContent = `ENDLESS MODE: ${winnerScore}-${loserScore}`;
         } else {
           endMessage.textContent = `${winner} WINS ${winnerScore}-${loserScore}!`;
-          queueCommentary(`AND THE WINNER IS ${winner}! CONGRATULATIONS!`, true, true);
         }
         endScreen.style.display = 'flex';
       }
