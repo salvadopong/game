@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>🏆 PONG CHAMPIONSHIP 3.0 🏆</title>
+  <title>🏆 PONG CHAMPIONSHIP 3.0.2 🏆</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
@@ -1107,7 +1107,7 @@
     </div>
 
     <div id="titleScreen" class="screen">
-      <h1>🏆 PONG CHAMPIONSHIP 3.0 🏆</h1>
+      <h1>🏆 PONG CHAMPIONSHIP 3.0.2 🏆</h1>
       <button class="btn-championship" id="twoPlayerButton">2 PLAYERS</button>
       <button class="btn-championship" id="singlePlayerButton">1 PLAYER VS BOT</button>
       <button class="btn-championship" id="fourPlayerButton">4 PLAYERS</button>
@@ -2251,61 +2251,50 @@
 
     // Game logic functions
     function resetBall() {
-      game.ball.x = canvas.width / 2;
-      game.ball.y = canvas.height / 2;
-      game.ball.speed = game.isFourPlayer ? FOUR_PLAYER_BALL_SPEED : INITIAL_BALL_SPEED;
-      game.ball.originalSpeed = game.ball.speed;
-      
-      // IMPROVEMENT #1: Don't set ball direction until after countdown
-      game.ball.dx = Math.random() > 0.5 ? game.ball.speed * 0.6 : -game.ball.speed * 0.6;
-      game.ball.dy = (Math.random() * 2 - 1) * game.ball.speed * 0.6;
-      
-      // Reset smash counter
-      game.smashCounter = 0;
-      game.smashTarget = Math.floor(Math.random() * 5) + 3;
-      
-      // Set ball color to white
-      game.ballColor = 'white';
-      
-      // Reset ball served flag
-      game.ballServed = false;
-      
-      // Make sure ball is visible
-      game.ball.x = Math.max(game.ballRadius, Math.min(canvas.width - game.ballRadius, game.ball.x));
-      game.ball.y = Math.max(game.ballRadius, Math.min(canvas.height - game.ballRadius, game.ball.y));
-    }
+  game.ball.x = canvas.width / 2;
+  game.ball.y = canvas.height / 2;
+  game.ball.speed = game.isFourPlayer ? FOUR_PLAYER_BALL_SPEED : INITIAL_BALL_SPEED;
+  game.ball.originalSpeed = game.ball.speed;
+  
+  // IMPROVEMENT #1: Don't set ball direction until after countdown
+  game.ball.dx = 0;
+  game.ball.dy = 0;
+  
+  // Reset smash counter
+  game.smashCounter = 0;
+  game.smashTarget = Math.floor(Math.random() * 5) + 3;
+  
+  // Set ball color to white
+  game.ballColor = 'white';
+  
+  // Reset ball served flag
+  game.ballServed = false;
+  
+  // Make sure ball is visible
+  game.ball.x = Math.max(game.ballRadius, Math.min(canvas.width - game.ballRadius, game.ball.x));
+  game.ball.y = Math.max(game.ballRadius, Math.min(canvas.height - game.ballRadius, game.ball.y));
+  
+  console.log("Ball reset at center, speed:", game.ball.speed, "served:", game.ballServed);
+}
 
-    function startBallAfterCountdown() {
-      // Set random direction for the ball after countdown
-      game.ball.dx = Math.random() > 0.5 ? game.ball.speed * 0.6 : -game.ball.speed * 0.6;
-      game.ball.dy = (Math.random() * 2 - 1) * game.ball.speed * 0.6;
-      
-      // Ensure ball speed is set
-      game.ball.speed = game.isFourPlayer ? FOUR_PLAYER_BALL_SPEED : INITIAL_BALL_SPEED;
-      game.ball.originalSpeed = game.ball.speed;
-      
-      // Mark ball as served
-      game.ballServed = true;
-    }
-
-    function resetPaddles() {
-      const paddleHeight = game.isFourPlayer ? game.fourPlayerPaddleHeight : game.paddleHeight;
-      const centerY = (canvas.height - paddleHeight) / 2;
-      
-      game.leftPaddle.y = centerY;
-      game.rightPaddle.y = centerY;
-      
-      // Set paddle colors to white
-      game.leftPaddleColor = 'white';
-      game.rightPaddleColor = 'white';
-      
-      if (game.isFourPlayer) {
-        game.leftTopPaddle.y = canvas.height * 0.25 - paddleHeight/2;
-        game.leftBottomPaddle.y = canvas.height * 0.75 - paddleHeight/2;
-        game.rightTopPaddle.y = canvas.height * 0.25 - paddleHeight/2;
-        game.rightBottomPaddle.y = canvas.height * 0.75 - paddleHeight/2;
-      }
-    }
+      function startBallAfterCountdown() {
+  // IMPROVEMENT #1: Only start ball movement after countdown
+  game.ballServed = true;
+  
+  // Set ball speed
+  game.ball.speed = game.isFourPlayer ? FOUR_PLAYER_BALL_SPEED : INITIAL_BALL_SPEED;
+  game.ball.originalSpeed = game.ball.speed;
+  
+  // Set random direction (left or right)
+  const direction = Math.random() > 0.5 ? 1 : -1;
+  
+  // Set ball velocity with proper direction and speed
+  game.ball.dx = direction * game.ball.speed;
+  game.ball.dy = (Math.random() * 2 - 1) * game.ball.speed * 0.6;
+  
+  // Make sure the ball starts moving
+  console.log("Ball started with dx:", game.ball.dx, "dy:", game.ball.dy, "speed:", game.ball.speed);
+}
 
     function constrainPaddles() {
       const paddleHeight = game.isFourPlayer ? game.fourPlayerPaddleHeight : game.paddleHeight;
@@ -4103,4 +4092,5 @@
   </script>
 </body>
 </html>
+
 
