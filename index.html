@@ -3574,48 +3574,49 @@
     }
 
     function startCountdown() {
-      game.countdownActive = true;
-      game.gameActive = false; // Game not active during countdown
-      const countdownElement = document.getElementById('countdown');
-      const goTextElement = document.getElementById('goText');
-      
-      if (countdownElement) {
-        countdownElement.style.display = 'flex';
-        countdownElement.textContent = '3';
-      }
-      
-      let count = 3;
-      game.countdownInterval = setInterval(() => {
-        if (countdownElement) {
-          if (count > 1) {
-            countdownElement.textContent = count - 1;
-            playSelectSound();
-          } else if (count === 1) {
-            countdownElement.style.display = 'none';
-            if (goTextElement) {
-              goTextElement.style.display = 'flex';
-              playSelectSound();
-            }
-          } else {
-            if (goTextElement) {
-              goTextElement.style.display = 'none';
-            }
-            clearInterval(game.countdownInterval);
-            game.countdownActive = false;
-            game.gameActive = true; // Game is now active!
-            
-            // Start the ball movement after countdown
-            startBallAfterCountdown();
-            
-            // Start the game after countdown
-            if (!game.isPaused) {
-              game.gameStarted = true;
-            }
-          }
+  game.countdownActive = true;
+  game.gameActive = false; // Game not active during countdown
+  const countdownElement = document.getElementById('countdown');
+  const goTextElement = document.getElementById('goText');
+  
+  if (countdownElement) {
+    countdownElement.style.display = 'flex';
+    countdownElement.textContent = '3';
+  }
+  
+  let count = 3;
+  game.countdownInterval = setInterval(() => {
+    if (countdownElement) {
+      if (count > 1) {
+        countdownElement.textContent = count - 1;
+        playSelectSound();
+      } else if (count === 1) {
+        countdownElement.style.display = 'none';
+        if (goTextElement) {
+          goTextElement.style.display = 'flex';
+          playSelectSound();
         }
-        count--;
-      }, 1000);
+      } else {
+        if (goTextElement) {
+          goTextElement.style.display = 'none';
+        }
+        clearInterval(game.countdownInterval);
+        game.countdownActive = false;
+        game.gameActive = true; // Game is now active!
+        
+        // FIX: Start the ball moving after countdown
+        game.ball.dx = Math.random() > 0.5 ? game.ball.speed * 0.6 : -game.ball.speed * 0.6;
+        game.ball.dy = (Math.random() * 2 - 1) * game.ball.speed * 0.6;
+        
+        // Start the game after countdown
+        if (!game.isPaused) {
+          game.gameStarted = true;
+        }
+      }
     }
+    count--;
+  }, 1000);
+}
 
     function startTimer() {
       if (game.timerInterval) {
@@ -3940,3 +3941,4 @@
   </script>
 </body>
 </html>
+
