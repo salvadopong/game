@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>🏆 PONG CHAMPIONSHIP 2.9.4 🏆</title>
+  <title>🏆 PONG CHAMPIONSHIP 3.0.2 🏆</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
@@ -457,7 +457,7 @@
       to { box-shadow: 0 0 10px gold; }
     }
     
-    /* Leaderboard Styles */
+    /* Leaderboard Styles - UPDATED FOR 3.0 */
     #leaderboardScreen {
       display: none;
     }
@@ -541,6 +541,17 @@
       color: #aaa;
       font-size: 0.8rem;
       margin-top: 3px;
+    }
+    
+    /* IMPROVEMENT #3: Winner/loser highlighting */
+    .winner-text {
+      color: gold !important;
+      font-weight: bold !important;
+      text-shadow: 0 0 5px rgba(255,215,0,0.7) !important;
+    }
+    
+    .loser-text {
+      color: #ff6b6b !important;
     }
     
     /* Difficulty selector */
@@ -1021,7 +1032,7 @@
 <body>
   <!-- Intro Animation Screen -->
   <div id="introAnimation">
-    <div id="introText">PONG CHAMPIONSHIP 2.9.3</div>
+    <div id="introText">PONG CHAMPIONSHIP 3.0</div>
     <button id="startButton">START</button>
   </div>
 
@@ -1034,7 +1045,7 @@
     <div id="timer">1:30.000</div>
     <div id="bonusPoints"></div>
     <div id="matchInfo"></div>
-    <div id="commentary">WELCOME TO THE PONG CHAMPIONSHIP 2.9.3!</div>
+    <div id="commentary">WELCOME TO THE PONG CHAMPIONSHIP 3.0!</div>
     
     <!-- Power charge bars - now properly separated -->
     <div id="leftChargeContainer" class="paddle-charge-container">
@@ -1096,7 +1107,7 @@
     </div>
 
     <div id="titleScreen" class="screen">
-      <h1>🏆 PONG CHAMPIONSHIP 2.9.3 🏆</h1>
+      <h1>🏆 PONG CHAMPIONSHIP 3.0.2 🏆</h1>
       <button class="btn-championship" id="twoPlayerButton">2 PLAYERS</button>
       <button class="btn-championship" id="singlePlayerButton">1 PLAYER VS BOT</button>
       <button class="btn-championship" id="fourPlayerButton">4 PLAYERS</button>
@@ -1148,24 +1159,22 @@
   <!-- Whats New Modal -->
   <div id="whatsNewModal">
     <div id="whatsNewContent">
-      <h2>What's New in Pong Championship 2.9.3</h2>
+      <h2>What's New in Pong Championship 3.0</h2>
       <ul>
-        <li><strong>FIXED COUNTDOWN:</strong> Ball now properly moves after "GO!" appears</li>
-        <li><strong>FIXED WHAT'S NEW BUTTON:</strong> Button now visible above menu screens</li>
-        <li><strong>IMPROVED POWER SHOT:</strong> Power shots now properly increase ball speed</li>
-        <li><strong>ENHANCED COMMENTARY:</strong> Commentary stops after game ends</li>
-        <li><strong>PRACTICE MODE FIX:</strong> Right paddle is now AI-controlled in practice mode</li>
-        <li><strong>MILLISECONDS TIMER:</strong> Timer now shows milliseconds counting down</li>
-        <li><strong>HALFTIME FIX:</strong> Game fully pauses during halftime</li>
-        <li><strong>END GAME FIX:</strong> Game completely stops after match ends</li>
-        <li><strong>TOURNAMENT COMMENTARY:</strong> Special commentary for tournament finals</li>
+        <li><strong>BUG FIX:</strong> Fixed random point scoring at game start, halftime, and extra time</li>
+        <li><strong>IMPROVED OVERTIME SYSTEM:</strong> Multiple overtime periods (30s, 60s, 90s, 120s) for draws</li>
+        <li><strong>ENHANCED LEADERBOARDS:</strong> Winners highlighted in gold, losers in red</li>
+        <li><strong>TIME-BASED VICTORY:</strong> Proper time-based win conditions with bonus points</li>
+        <li><strong>SCORING SYSTEM FIX:</strong> Game properly ends when player reaches winning threshold with bonus points</li>
+        <li><strong>IMPROVED TIMER:</strong> Accurate milliseconds tracking and display</li>
+        <li><strong>BETTER COMMENTARY:</strong> Enhanced tournament commentary</li>
       </ul>
       <button class="modal-btn" id="closeWhatsNew">CLOSE</button>
     </div>
   </div>
 
   <!-- Whats New Button is now positioned outside of screens -->
-  <button id="whatsNewButton">ℹ️ What's New in 2.9.3</button>
+  <button id="whatsNewButton">ℹ️ What's New in 3.0</button>
 
   <div id="twoPlayerPrompt" class="modal-overlay" style="display: none;">
     <div class="modal-content">
@@ -1314,6 +1323,8 @@
         <p>• When full, activate power shot for a super-fast return</p>
         <p>• Ball speeds up with each hit</p>
         <p>• First to 10 points wins (with bonus points in deuce situations)</p>
+        <p>• If time runs out, player with most points wins</p>
+        <p>• In case of draw, multiple overtime periods (30s, 60s, 90s, 120s)</p>
       </div>
       <div style="display: flex; justify-content: center; gap: 10px; margin-top: 15px;">
         <button class="modal-btn" id="closeTutorial">CLOSE</button>
@@ -1358,7 +1369,7 @@
     const WINNING_SCORE = 10;
     const HALF_TIME = 90;
     const HALF_TIME_BREAK = 10;
-    const OVERTIME_TIME = 30;
+    const OVERTIME_TIMES = [30, 60, 90, 120]; // IMPROVEMENT #2: Multiple overtime periods
     const BALL_SPEED_INCREMENT = 0.7;
     const SMASH_SPEED_MULTIPLIER = 2.0;
     const SMASH_DURATION = 800;
@@ -1410,6 +1421,7 @@
       remainingTime: HALF_TIME,
       currentHalf: 1,
       extraTime: 0,
+      overtimePeriod: 0, // IMPROVEMENT #2: Track which overtime period we're in
       halftimeActive: false,
       lastScorer: null,
       matchPoint: false,
@@ -1486,10 +1498,14 @@
       gameMode: null,
       pausedBallState: null,
       pausedPaddleState: null,
-      gameActive: false, // NEW: Track if game is actively playing (after countdown)
-      halftimeBreakActive: false, // NEW: Track halftime break
-      milliseconds: 0, // NEW: Track milliseconds
-      lastTimerUpdate: 0 // NEW: For tracking timer updates
+      gameActive: false,
+      halftimeBreakActive: false,
+      milliseconds: 0,
+      lastTimerUpdate: 0,
+      // IMPROVEMENT #1: Track if ball has been served to prevent random points
+      ballServed: false,
+      // IMPROVEMENT #2: Track if game ended by time
+      endedByTime: false
     };
 
     // Commentary phrases
@@ -1849,12 +1865,26 @@
         game.recentPlays.slice(0, 10).forEach((play, index) => {
           const item = document.createElement('div');
           item.className = 'leaderboard-item';
+          
+          // IMPROVEMENT #3: Determine winner and loser
+          const isPlayer1Winner = play.score1 > play.score2;
+          const player1Class = isPlayer1Winner ? 'winner-text' : 'loser-text';
+          const player2Class = !isPlayer1Winner ? 'winner-text' : 'loser-text';
+          
           const opponent = play.player2 === "BOT" ? "BOT" : play.player2;
           const timeAgo = getTimeAgo(play.timestamp);
           const difficulty = play.difficulty ? ` (${play.difficulty.toUpperCase()})` : '';
-          item.innerHTML = `<strong>${play.player1}</strong> vs <strong>${opponent}${difficulty}</strong><br>
-                           ${play.stage || "Match"} - ${play.score1}-${play.score2}
-                           <div class="leaderboard-time">${timeAgo}</div>`;
+          
+          item.innerHTML = `
+            <strong class="${player1Class}">${play.player1}</strong> 
+            vs 
+            <strong class="${player2Class}">${opponent}${difficulty}</strong><br>
+            ${play.stage || "Match"} - 
+            <span class="${player1Class}">${play.score1}</span>
+            -
+            <span class="${player2Class}">${play.score2}</span>
+            <div class="leaderboard-time">${timeAgo}</div>`;
+          
           recentPlaysList.appendChild(item);
         });
       }
@@ -1867,10 +1897,21 @@
         game.bestWins.sort((a, b) => (b.score1 - b.score2) - (a.score1 - a.score2)).slice(0, 10).forEach((win, index) => {
           const item = document.createElement('div');
           item.className = 'leaderboard-item';
+          
+          // IMPROVEMENT #3: Highlight winner in gold
+          const isPlayer1Winner = win.score1 > win.score2;
+          const player1Class = isPlayer1Winner ? 'winner-text' : 'loser-text';
+          const player2Class = !isPlayer1Winner ? 'winner-text' : 'loser-text';
+          
           const timeAgo = getTimeAgo(win.timestamp);
           const difficulty = win.difficulty ? ` (${win.difficulty.toUpperCase()})` : '';
+          
           item.innerHTML = `<span class="leaderboard-rank">${index + 1}.</span> 
-                           <strong>${win.player1}</strong> ${win.score1}-${win.score2} <strong>${win.player2}${difficulty}</strong>
+                           <strong class="${player1Class}">${win.player1}</strong> 
+                           <span class="${player1Class}">${win.score1}</span>
+                           -
+                           <span class="${player2Class}">${win.score2}</span> 
+                           <strong class="${player2Class}">${win.player2}${difficulty}</strong>
                            <div class="leaderboard-time">${timeAgo}</div>`;
           bestWinsList.appendChild(item);
         });
@@ -1884,10 +1925,17 @@
         game.botChampions.sort((a, b) => (b.score1 - b.score2) - (a.score1 - a.score2)).slice(0, 20).forEach((champ, index) => {
           const item = document.createElement('div');
           item.className = 'leaderboard-item';
+          
+          // IMPROVEMENT #3: Player is always winner in bot champions
           const timeAgo = getTimeAgo(champ.timestamp);
           const difficulty = champ.difficulty ? ` (${champ.difficulty.toUpperCase()})` : '';
+          
           item.innerHTML = `<span class="leaderboard-rank">${index + 1}.</span> 
-                           <strong>${champ.player1}</strong> ${champ.score1}-${champ.score2} BOT${difficulty}
+                           <strong class="winner-text">${champ.player1}</strong> 
+                           <span class="winner-text">${champ.score1}</span>
+                           -
+                           <span class="loser-text">${champ.score2}</span> 
+                           <strong class="loser-text">BOT${difficulty}</strong>
                            <div class="leaderboard-time">${timeAgo}</div>`;
           botChampionList.appendChild(item);
         });
@@ -2203,7 +2251,7 @@
 
     // Game logic functions
     function resetBall() {
-      game.ball.x = canvas.width / 2;
+    game.ball.x = canvas.width / 2;
       game.ball.y = canvas.height / 2;
       game.ball.speed = game.isFourPlayer ? FOUR_PLAYER_BALL_SPEED : INITIAL_BALL_SPEED;
       game.ball.originalSpeed = game.ball.speed;
@@ -2222,34 +2270,43 @@
       game.ball.y = Math.max(game.ballRadius, Math.min(canvas.height - game.ballRadius, game.ball.y));
     }
 
-    function startBallAfterCountdown() {
-      // Set random direction for the ball after countdown - FIXED: Now properly starts moving
-      game.ball.dx = Math.random() > 0.5 ? game.ball.speed * 0.6 : -game.ball.speed * 0.6;
-      game.ball.dy = (Math.random() * 2 - 1) * game.ball.speed * 0.6;
-      
-      // Ensure ball speed is set
-      game.ball.speed = game.isFourPlayer ? FOUR_PLAYER_BALL_SPEED : INITIAL_BALL_SPEED;
-      game.ball.originalSpeed = game.ball.speed;
-    }
-
     function resetPaddles() {
-      const paddleHeight = game.isFourPlayer ? game.fourPlayerPaddleHeight : game.paddleHeight;
-      const centerY = (canvas.height - paddleHeight) / 2;
-      
-      game.leftPaddle.y = centerY;
-      game.rightPaddle.y = centerY;
-      
-      // Set paddle colors to white
-      game.leftPaddleColor = 'white';
-      game.rightPaddleColor = 'white';
-      
-      if (game.isFourPlayer) {
-        game.leftTopPaddle.y = canvas.height * 0.25 - paddleHeight/2;
-        game.leftBottomPaddle.y = canvas.height * 0.75 - paddleHeight/2;
-        game.rightTopPaddle.y = canvas.height * 0.25 - paddleHeight/2;
-        game.rightBottomPaddle.y = canvas.height * 0.75 - paddleHeight/2;
-      }
-    }
+  const paddleHeight = game.isFourPlayer ? game.fourPlayerPaddleHeight : game.paddleHeight;
+  const centerY = (canvas.height - paddleHeight) / 2;
+  
+  game.leftPaddle.y = centerY;
+  game.rightPaddle.y = centerY;
+  
+  // Set paddle colors to white
+  game.leftPaddleColor = 'white';
+  game.rightPaddleColor = 'white';
+  
+  if (game.isFourPlayer) {
+    game.leftTopPaddle.y = canvas.height * 0.25 - paddleHeight/2;
+    game.leftBottomPaddle.y = canvas.height * 0.75 - paddleHeight/2;
+    game.rightTopPaddle.y = canvas.height * 0.25 - paddleHeight/2;
+    game.rightBottomPaddle.y = canvas.height * 0.75 - paddleHeight/2;
+  }
+}
+
+      function startBallAfterCountdown() {
+  // IMPROVEMENT #1: Only start ball movement after countdown
+  game.ballServed = true;
+  
+  // Set ball speed
+  game.ball.speed = game.isFourPlayer ? FOUR_PLAYER_BALL_SPEED : INITIAL_BALL_SPEED;
+  game.ball.originalSpeed = game.ball.speed;
+  
+  // Set random direction (left or right)
+  const direction = Math.random() > 0.5 ? 1 : -1;
+  
+  // Set ball velocity with proper direction and speed
+  game.ball.dx = direction * game.ball.speed;
+  game.ball.dy = (Math.random() * 2 - 1) * game.ball.speed * 0.6;
+  
+  // Make sure the ball starts moving
+  console.log("Ball started with dx:", game.ball.dx, "dy:", game.ball.dy, "speed:", game.ball.speed);
+}
 
     function constrainPaddles() {
       const paddleHeight = game.isFourPlayer ? game.fourPlayerPaddleHeight : game.paddleHeight;
@@ -2562,8 +2619,8 @@
         game.ball.dy = -Math.abs(game.ball.dy);
       }
       
-      // FIXED: Ball only moves when game is active (after countdown)
-      if (game.gameActive) {
+      // Ball only moves when game is active (after countdown) AND ball has been served
+      if (game.gameActive && game.ballServed) {
         game.ball.x += game.ball.dx * speedFactor;
         game.ball.y += game.ball.dy * speedFactor;
       }
@@ -2696,7 +2753,7 @@
             game.ball.y < game.leftPaddle.y + paddleHeight) {
           const angle = getBallAngle(game.leftPaddle.y, game.ball.y, paddleHeight);
           
-          // Check for power shot - FIXED: Now properly applies speed multiplier
+          // Check for power shot
           if (game.leftCharged || game.last10Seconds) {
             game.ball.dx = Math.abs(Math.cos(angle)) * game.ball.speed * SMASH_SPEED_MULTIPLIER;
             game.ball.dy = Math.sin(angle) * game.ball.speed * SMASH_SPEED_MULTIPLIER;
@@ -2738,7 +2795,7 @@
             game.ball.y < game.rightPaddle.y + paddleHeight) {
           const angle = getBallAngle(game.rightPaddle.y, game.ball.y, paddleHeight);
           
-          // Check for power shot - FIXED: Now properly applies speed multiplier
+          // Check for power shot
           if (game.rightCharged || game.last10Seconds) {
             game.ball.dx = -Math.abs(Math.cos(angle)) * game.ball.speed * SMASH_SPEED_MULTIPLIER;
             game.ball.dy = Math.sin(angle) * game.ball.speed * SMASH_SPEED_MULTIPLIER;
@@ -2850,48 +2907,60 @@
     
     // Ball out of bounds - scoring
     if (game.ball.x - game.ballRadius < 0) {
-      if (!game.isPracticeMode && !game.isEndlessMode) {
-        game.rightPaddle.score++;
-        document.getElementById('rightScore').textContent = game.rightPaddle.score;
-        game.lastScorer = game.rightPlayer;
-        handleScore();
-      } else if (game.isPracticeMode) {
-        // In practice mode, just reset the ball immediately
-        resetBall();
-        game.ball.dx = -Math.abs(game.ball.dx);
-        if (game.practiceType === 'responding') {
-          queueCommentary("Try again! Press E for a power shot!", true);
-        }
-      } else if (game.isEndlessMode) {
-        if (game.showScore) {
+      // IMPROVEMENT #1: Only score if ball has been served
+      if (game.ballServed) {
+        if (!game.isPracticeMode && !game.isEndlessMode) {
           game.rightPaddle.score++;
           document.getElementById('rightScore').textContent = game.rightPaddle.score;
+          game.lastScorer = game.rightPlayer;
+          handleScore();
+        } else if (game.isPracticeMode) {
+          // In practice mode, just reset the ball immediately
+          resetBall();
+          game.ball.dx = -Math.abs(game.ball.dx);
+          if (game.practiceType === 'responding') {
+            queueCommentary("Try again! Press E for a power shot!", true);
+          }
+        } else if (game.isEndlessMode) {
+          if (game.showScore) {
+            game.rightPaddle.score++;
+            document.getElementById('rightScore').textContent = game.rightPaddle.score;
+          }
+          resetBall();
+          game.ball.dx = -Math.abs(game.ball.dx);
         }
+      } else {
+        // IMPROVEMENT #1: If ball goes out before being served, just reset it
         resetBall();
-        game.ball.dx = -Math.abs(game.ball.dx);
       }
     }
 
     if (game.ball.x + game.ballRadius > canvas.width) {
-      if (!game.isPracticeMode && !game.isEndlessMode) {
-        game.leftPaddle.score++;
-        document.getElementById('leftScore').textContent = game.leftPaddle.score;
-        game.lastScorer = game.leftPlayer;
-        handleScore();
-      } else if (game.isPracticeMode || game.isEndlessMode) {
-        // In practice/endless mode, just reset the ball immediately
-        if (game.isEndlessMode && game.showScore) {
+      // IMPROVEMENT #1: Only score if ball has been served
+      if (game.ballServed) {
+        if (!game.isPracticeMode && !game.isEndlessMode) {
           game.leftPaddle.score++;
           document.getElementById('leftScore').textContent = game.leftPaddle.score;
-        } else if (game.isPracticeMode) {
-          game.leftPaddle.score++;
-          document.getElementById('leftScore').textContent = game.leftPaddle.score;
+          game.lastScorer = game.leftPlayer;
+          handleScore();
+        } else if (game.isPracticeMode || game.isEndlessMode) {
+          // In practice/endless mode, just reset the ball immediately
+          if (game.isEndlessMode && game.showScore) {
+            game.leftPaddle.score++;
+            document.getElementById('leftScore').textContent = game.leftPaddle.score;
+          } else if (game.isPracticeMode) {
+            game.leftPaddle.score++;
+            document.getElementById('leftScore').textContent = game.leftPaddle.score;
+          }
+          resetBall();
+          game.ball.dx = Math.abs(game.ball.dx);
+          if (game.isPracticeMode && game.practiceType === 'powershot') {
+            queueCommentary("Great! Now try again!", true);
+          }
         }
+      } else {
+        // IMPROVEMENT #1: If ball goes out before being served, just reset it
         resetBall();
-        game.ball.dx = Math.abs(game.ball.dx);
-        if (game.isPracticeMode && game.practiceType === 'powershot') {
-          queueCommentary("Great! Now try again!", true);
-        }
       }
     }
 
@@ -2952,6 +3021,7 @@
       queueCommentary(`${game.lastScorer} SCORES! ${getRandomCommentary()}`, true);
     }
 
+    // IMPROVEMENT #2: Check if player has reached winning threshold
     if (game.leftPaddle.score >= winningThreshold || game.rightPaddle.score >= winningThreshold) {
       endGame();
       return;
@@ -3277,11 +3347,13 @@
     function startGame() {
       game.isPaused = false;
       game.gameActive = false; // Game not active until countdown finishes
+      game.endedByTime = false; // Reset time-based ending flag
       game.leftPaddle.score = 0;
       game.rightPaddle.score = 0;
       game.remainingTime = HALF_TIME;
       game.currentHalf = 1;
       game.extraTime = 0;
+      game.overtimePeriod = 0; // Reset overtime period
       game.matchPoint = false;
       game.bonusPoints = 0;
       game.deuceActive = false;
@@ -3297,6 +3369,7 @@
       game.practiceWins = 0;
       game.milliseconds = 0; // Reset milliseconds
       game.lastTimerUpdate = Date.now(); // Initialize timer
+      game.ballServed = false; // Reset ball served flag
       
       // Reset charge bars
       game.leftCharge = 0;
@@ -3545,6 +3618,7 @@
       game.countdownActive = false;
       game.isPracticeMode = false;
       game.isEndlessMode = false;
+      game.endedByTime = false;
       
       // Stop music and commentary
       backgroundMusic.pause();
@@ -3588,6 +3662,7 @@
     function startCountdown() {
       game.countdownActive = true;
       game.gameActive = false; // Game not active during countdown
+      game.ballServed = false; // Ball hasn't been served yet
       const countdownElement = document.getElementById('countdown');
       const goTextElement = document.getElementById('goText');
       
@@ -3616,7 +3691,7 @@
             game.countdownActive = false;
             game.gameActive = true; // Game is now active!
             
-            // FIXED: Start the ball movement after "GO!" disappears
+            // Start the ball movement after "GO!" disappears
             startBallAfterCountdown();
             
             // Start the game after countdown
@@ -3669,12 +3744,13 @@
             }
           }
           
-          // Check for halftime
+          // Check for halftime or end of time
           if (game.remainingTime <= 0 && game.milliseconds <= 0) {
             if (game.currentHalf === 1) {
               startHalftime();
             } else {
-              startOvertime();
+              // IMPROVEMENT #2: Check for overtime or end game
+              checkTimeEnd();
             }
           }
         }
@@ -3684,6 +3760,7 @@
     function startHalftime() {
       game.halftimeActive = true;
       game.gameActive = false; // Pause game during halftime
+      game.ballServed = false; // Reset ball served flag
       clearInterval(game.timerInterval);
       
       const halftimeScreen = document.getElementById('halftimeScreen');
@@ -3697,8 +3774,6 @@
       const rightScore = game.rightPaddle.score;
       
       // Stop ball movement
-      const ballDx = game.ball.dx;
-      const ballDy = game.ball.dy;
       game.ball.dx = 0;
       game.ball.dy = 0;
       
@@ -3739,28 +3814,60 @@
       }, HALF_TIME_BREAK * 1000);
     }
 
+    function checkTimeEnd() {
+      // IMPROVEMENT #2: Check if we need to go to overtime or end the game
+      const winningThreshold = WINNING_SCORE + game.bonusPoints;
+      
+      // Check if any player has reached winning threshold
+      if (game.leftPaddle.score >= winningThreshold || game.rightPaddle.score >= winningThreshold) {
+        // Player reached winning threshold, they win
+        game.endedByTime = true;
+        endGame();
+        return;
+      }
+      
+      // Check scores to determine if we need overtime
+      if (game.leftPaddle.score === game.rightPaddle.score) {
+        // Scores are tied, go to overtime
+        startOvertime();
+      } else {
+        // Scores are different, player with higher score wins
+        game.endedByTime = true;
+        endGame();
+      }
+    }
+
     function startOvertime() {
-      game.extraTime += OVERTIME_TIME;
-      game.remainingTime = OVERTIME_TIME;
-      game.milliseconds = 0;
-      playETSound();
-      
-      queueCommentary("EXTRA TIME!", true, true);
-      
-      // Update match info
-      document.getElementById('matchInfo').textContent = `Extra Time | ${game.tournamentStage} | +${game.extraTime}s`;
-      
-      // Reset ball and paddles
-      resetBall();
-      resetPaddles();
-      
-      // Start countdown for overtime
-      startCountdown();
-      
-      // Start timer after countdown
-      setTimeout(() => {
-        startTimer();
-      }, 4000);
+      // IMPROVEMENT #2: Multiple overtime periods
+      if (game.overtimePeriod < OVERTIME_TIMES.length) {
+        const overtimeTime = OVERTIME_TIMES[game.overtimePeriod];
+        game.overtimePeriod++;
+        game.extraTime += overtimeTime;
+        game.remainingTime = overtimeTime;
+        game.milliseconds = 0;
+        playETSound();
+        
+        queueCommentary(`OVERTIME PERIOD ${game.overtimePeriod}! (${overtimeTime} seconds)`, true, true);
+        
+        // Update match info
+        document.getElementById('matchInfo').textContent = `Overtime ${game.overtimePeriod} | ${game.tournamentStage} | +${game.extraTime}s`;
+        
+        // Reset ball and paddles
+        resetBall();
+        resetPaddles();
+        
+        // Start countdown for overtime
+        startCountdown();
+        
+        // Start timer after countdown
+        setTimeout(() => {
+          startTimer();
+        }, 4000);
+      } else {
+        // Maximum overtime periods reached, end game with current scores
+        game.endedByTime = true;
+        endGame();
+      }
     }
 
     function queueCommentary(text, urgent = false, useTTS = false) {
@@ -3769,7 +3876,7 @@
         return;
       }
       
-      // IMPROVEMENT #4: Clear previous commentary
+      // Clear previous commentary
       if (urgent) {
         game.commentaryQueue = []; // Clear all previous commentary
         stopCommentary(); // Stop any ongoing speech
@@ -3787,7 +3894,7 @@
     }
 
     function stopCommentary() {
-      // IMPROVEMENT #4: Stop any ongoing speech
+      // Stop any ongoing speech
       if (game.currentUtterance) {
         speechSynthesis.cancel();
         game.currentUtterance = null;
@@ -3879,10 +3986,42 @@
       
       // Determine winner
       const winningThreshold = WINNING_SCORE + game.bonusPoints;
-      const winner = game.leftPaddle.score >= winningThreshold ? game.leftPlayer : game.rightPlayer;
-      const loser = game.leftPaddle.score >= winningThreshold ? game.rightPlayer : game.leftPlayer;
-      const winnerScore = game.leftPaddle.score >= winningThreshold ? game.leftPaddle.score : game.rightPaddle.score;
-      const loserScore = game.leftPaddle.score >= winningThreshold ? game.rightPaddle.score : game.leftPaddle.score;
+      let winner, loser, winnerScore, loserScore;
+      
+      // IMPROVEMENT #2: Check if game ended by time or by reaching score
+      if (game.endedByTime) {
+        // Game ended by time, check who has more points
+        if (game.leftPaddle.score > game.rightPaddle.score) {
+          winner = game.leftPlayer;
+          loser = game.rightPlayer;
+          winnerScore = game.leftPaddle.score;
+          loserScore = game.rightPaddle.score;
+        } else if (game.rightPaddle.score > game.leftPaddle.score) {
+          winner = game.rightPlayer;
+          loser = game.leftPlayer;
+          winnerScore = game.rightPaddle.score;
+          loserScore = game.leftPaddle.score;
+        } else {
+          // It's a draw after all overtime periods
+          winner = "DRAW";
+          loser = "DRAW";
+          winnerScore = game.leftPaddle.score;
+          loserScore = game.rightPaddle.score;
+        }
+      } else {
+        // Game ended by reaching winning threshold
+        if (game.leftPaddle.score >= winningThreshold) {
+          winner = game.leftPlayer;
+          loser = game.rightPlayer;
+          winnerScore = game.leftPaddle.score;
+          loserScore = game.rightPaddle.score;
+        } else {
+          winner = game.rightPlayer;
+          loser = game.leftPlayer;
+          winnerScore = game.rightPaddle.score;
+          loserScore = game.leftPaddle.score;
+        }
+      }
       
       // Play game over sound
       playGameOverSound();
@@ -3890,12 +4029,22 @@
       // Stop music
       backgroundMusic.pause();
       
-      // Create confetti for winner
-      createConfetti();
+      // Create confetti for winner (if not a draw)
+      if (winner !== "DRAW") {
+        createConfetti();
+      }
       
-      // IMPROVEMENT #3: Special commentary for tournament winner
+      // IMPROVEMENT #2: Special commentary for time-based win
       let victoryMessage;
-      if (game.tournamentStage === "Finals") {
+      if (winner === "DRAW") {
+        victoryMessage = "IT'S A DRAW AFTER ALL OVERTIME PERIODS!";
+      } else if (game.endedByTime) {
+        if (game.tournamentStage === "Finals") {
+          victoryMessage = `${winner} WINS THE TOURNAMENT BY TIME!`;
+        } else {
+          victoryMessage = `${winner} WINS BY TIME!`;
+        }
+      } else if (game.tournamentStage === "Finals") {
         victoryMessage = `${winner} HAS WON THE TOURNAMENT!`;
       } else {
         victoryMessage = `${winner} HAS WON THE GAME!`;
@@ -3905,14 +4054,15 @@
       stopCommentary(); // Stop any ongoing commentary
       queueCommentary(victoryMessage, true, true);
       
-      // Save to leaderboards
-      if (!game.isPracticeMode && !game.isEndlessMode) {
+      // Save to leaderboards (if not a draw)
+      if (!game.isPracticeMode && !game.isEndlessMode && winner !== "DRAW") {
         const gameData = {
           player1: game.leftPlayer,
           player2: game.rightPlayer,
           score1: game.leftPaddle.score,
           score2: game.rightPaddle.score,
           stage: game.tournamentStage,
+          endedByTime: game.endedByTime,
           timestamp: Date.now()
         };
         
@@ -3939,7 +4089,9 @@
         if (game.isPracticeMode) {
           endMessage.textContent = `PRACTICE COMPLETE!`;
         } else if (game.isEndlessMode) {
-          endMessage.textContent = `ENDLESS MODE: ${winnerScore}-${loserScore}`;
+          endMessage.textContent = `ENDLESS MODE: ${game.leftPaddle.score}-${game.rightPaddle.score}`;
+        } else if (winner === "DRAW") {
+          endMessage.textContent = `DRAW! ${game.leftPaddle.score}-${game.rightPaddle.score}`;
         } else {
           endMessage.textContent = `${winner} WINS ${winnerScore}-${loserScore}!`;
         }
