@@ -2257,8 +2257,8 @@
       game.ball.originalSpeed = game.ball.speed;
       
       // IMPROVEMENT #1: Don't set ball direction until after countdown
-      game.ball.dx = 0;
-      game.ball.dy = 0;
+      game.ball.dx = Math.random() > 0.5 ? game.ball.speed * 0.6 : -game.ball.speed * 0.6;
+      game.ball.dy = (Math.random() * 2 - 1) * game.ball.speed * 0.6;
       
       // Reset smash counter
       game.smashCounter = 0;
@@ -4103,3 +4103,4 @@
   </script>
 </body>
 </html>
+
