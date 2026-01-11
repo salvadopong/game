@@ -2207,8 +2207,8 @@
       game.ball.y = canvas.height / 2;
       game.ball.speed = game.isFourPlayer ? FOUR_PLAYER_BALL_SPEED : INITIAL_BALL_SPEED;
       game.ball.originalSpeed = game.ball.speed;
-      game.ball.dx = 0; // Start with zero velocity during countdown
-      game.ball.dy = 0;
+      game.ball.dx = Math.random() > 0.5 ? game.ball.speed * 0.6 : -game.ball.speed * 0.6;
+      game.ball.dy = (Math.random() * 2 - 1) * game.ball.speed * 0.6;
       
       // Reset smash counter
       game.smashCounter = 0;
@@ -3952,3 +3952,4 @@
   </script>
 </body>
 </html>
+
