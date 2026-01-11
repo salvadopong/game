@@ -2277,6 +2277,25 @@
   console.log("Ball reset at center, speed:", game.ball.speed, "served:", game.ballServed);
 }
 
+    function resetPaddles() {
+  const paddleHeight = game.isFourPlayer ? game.fourPlayerPaddleHeight : game.paddleHeight;
+  const centerY = (canvas.height - paddleHeight) / 2;
+  
+  game.leftPaddle.y = centerY;
+  game.rightPaddle.y = centerY;
+  
+  // Set paddle colors to white
+  game.leftPaddleColor = 'white';
+  game.rightPaddleColor = 'white';
+  
+  if (game.isFourPlayer) {
+    game.leftTopPaddle.y = canvas.height * 0.25 - paddleHeight/2;
+    game.leftBottomPaddle.y = canvas.height * 0.75 - paddleHeight/2;
+    game.rightTopPaddle.y = canvas.height * 0.25 - paddleHeight/2;
+    game.rightBottomPaddle.y = canvas.height * 0.75 - paddleHeight/2;
+  }
+}
+
       function startBallAfterCountdown() {
   // IMPROVEMENT #1: Only start ball movement after countdown
   game.ballServed = true;
@@ -4092,5 +4111,6 @@
   </script>
 </body>
 </html>
+
 
 
