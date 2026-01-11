@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>🏆 PONG CHAMPIONSHIP 2.9 🏆</title>
+  <title>🏆 PONG CHAMPIONSHIP 2.9.4 🏆</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
@@ -209,7 +209,7 @@
       color: white;
       font-size: 1rem;
       cursor: pointer;
-      z-index: 40;
+      z-index: 150; /* FIXED: Higher z-index to appear above menu */
     }
     
     #pauseScreen, #countdown, #halftimeScreen, #gameOverScreen {
@@ -923,6 +923,7 @@
         right: 10px;
         font-size: 0.9rem;
         padding: 4px 12px;
+        z-index: 150; /* FIXED: Maintain high z-index on mobile */
       }
       .mobile-btn {
         width: 60px;
@@ -1020,7 +1021,7 @@
 <body>
   <!-- Intro Animation Screen -->
   <div id="introAnimation">
-    <div id="introText">PONG CHAMPIONSHIP 2.9</div>
+    <div id="introText">PONG CHAMPIONSHIP 2.9.3</div>
     <button id="startButton">START</button>
   </div>
 
@@ -1033,7 +1034,7 @@
     <div id="timer">1:30.000</div>
     <div id="bonusPoints"></div>
     <div id="matchInfo"></div>
-    <div id="commentary">WELCOME TO THE PONG CHAMPIONSHIP 2.9!</div>
+    <div id="commentary">WELCOME TO THE PONG CHAMPIONSHIP 2.9.3!</div>
     
     <!-- Power charge bars - now properly separated -->
     <div id="leftChargeContainer" class="paddle-charge-container">
@@ -1051,7 +1052,7 @@
     <button id="fullscreenButton" class="control-btn">⛶</button>
     <button id="musicMuteButton" class="control-btn">🎵</button>
     <button id="backButton" class="control-btn" style="display: none;">↩️</button>
-    <button id="whatsNewButton" style="display: none;">ℹ️ What's New in 2.9</button>
+    <!-- Whats New button moved outside of screens to be always visible -->
     
     <div id="mobileControls" style="display: none;">
       <div class="mobile-paddle-controls">
@@ -1095,7 +1096,7 @@
     </div>
 
     <div id="titleScreen" class="screen">
-      <h1>🏆 PONG CHAMPIONSHIP 2.9 🏆</h1>
+      <h1>🏆 PONG CHAMPIONSHIP 2.9.3 🏆</h1>
       <button class="btn-championship" id="twoPlayerButton">2 PLAYERS</button>
       <button class="btn-championship" id="singlePlayerButton">1 PLAYER VS BOT</button>
       <button class="btn-championship" id="fourPlayerButton">4 PLAYERS</button>
@@ -1147,20 +1148,24 @@
   <!-- Whats New Modal -->
   <div id="whatsNewModal">
     <div id="whatsNewContent">
-      <h2>What's New in Pong Championship 2.9</h2>
+      <h2>What's New in Pong Championship 2.9.3</h2>
       <ul>
-        <li><strong>IMPROVED COUNTDOWN:</strong> Ball only released after "GO!" appears</li>
-        <li><strong>FIXED POWER SHOT:</strong> Power shots now properly increase ball speed</li>
-        <li><strong>ENHANCED COMMENTARY:</strong> Commentary stops after game ends and interrupts previous speech</li>
+        <li><strong>FIXED COUNTDOWN:</strong> Ball now properly moves after "GO!" appears</li>
+        <li><strong>FIXED WHAT'S NEW BUTTON:</strong> Button now visible above menu screens</li>
+        <li><strong>IMPROVED POWER SHOT:</strong> Power shots now properly increase ball speed</li>
+        <li><strong>ENHANCED COMMENTARY:</strong> Commentary stops after game ends</li>
         <li><strong>PRACTICE MODE FIX:</strong> Right paddle is now AI-controlled in practice mode</li>
         <li><strong>MILLISECONDS TIMER:</strong> Timer now shows milliseconds counting down</li>
-        <li><strong>HALFTIME FIX:</strong> Game fully pauses during halftime with proper commentary</li>
+        <li><strong>HALFTIME FIX:</strong> Game fully pauses during halftime</li>
         <li><strong>END GAME FIX:</strong> Game completely stops after match ends</li>
         <li><strong>TOURNAMENT COMMENTARY:</strong> Special commentary for tournament finals</li>
       </ul>
       <button class="modal-btn" id="closeWhatsNew">CLOSE</button>
     </div>
   </div>
+
+  <!-- Whats New Button is now positioned outside of screens -->
+  <button id="whatsNewButton">ℹ️ What's New in 2.9.3</button>
 
   <div id="twoPlayerPrompt" class="modal-overlay" style="display: none;">
     <div class="modal-content">
@@ -1558,8 +1563,9 @@
       // Enable sound by default
       game.soundEnabled = true;
       
-      // Show What's New button only on title screen
+      // Show What's New button (already in HTML with higher z-index)
       document.getElementById('whatsNewButton').style.display = 'block';
+      document.getElementById('whatsNewButton').addEventListener('click', showWhatsNew);
     }
 
     function setupIntroScreen() {
@@ -1581,6 +1587,7 @@
         createConfetti(true);
         document.getElementById('introAnimation').style.display = 'none';
         document.getElementById('titleScreen').style.display = 'flex';
+        document.getElementById('whatsNewButton').style.display = 'block';
         
         // Play random intro sound only when button is clicked
         const introSounds = [introSound, introSound1, introSound2, introSound3];
@@ -1640,7 +1647,6 @@
       document.getElementById('returnToMenuButton').addEventListener('click', returnToMenu);
       document.getElementById('endScreenBtn').addEventListener('click', returnToMenu);
       document.getElementById('backButton').addEventListener('click', handleBackButton);
-      document.getElementById('whatsNewButton').addEventListener('click', showWhatsNew);
       
       // D-Pad controls
       document.getElementById('dpadUpLeft').addEventListener('touchstart', () => game.keysPressed['w'] = true);
@@ -1738,6 +1744,7 @@
 
     function showTutorial() {
       document.getElementById('tutorialModal').style.display = 'flex';
+      document.getElementById('whatsNewButton').style.display = 'none';
       playSelectSound();
     }
 
@@ -1778,8 +1785,10 @@
         hideLeaderboards();
       } else if (document.getElementById('whatsNewModal').style.display === 'flex') {
         document.getElementById('whatsNewModal').style.display = 'none';
+        document.getElementById('whatsNewButton').style.display = 'block';
       } else if (document.getElementById('tutorialModal').style.display === 'flex') {
         document.getElementById('tutorialModal').style.display = 'none';
+        document.getElementById('whatsNewButton').style.display = 'block';
       } else {
         returnToMenu();
       }
@@ -2198,8 +2207,8 @@
       game.ball.y = canvas.height / 2;
       game.ball.speed = game.isFourPlayer ? FOUR_PLAYER_BALL_SPEED : INITIAL_BALL_SPEED;
       game.ball.originalSpeed = game.ball.speed;
-      game.ball.dx = Math.random() > 0.5 ? game.ball.speed * 0.6 : -game.ball.speed * 0.6;
-      game.ball.dy = (Math.random() * 2 - 1) * game.ball.speed * 0.6;
+      game.ball.dx = 0; // Start with zero velocity during countdown
+      game.ball.dy = 0;
       
       // Reset smash counter
       game.smashCounter = 0;
@@ -2214,9 +2223,13 @@
     }
 
     function startBallAfterCountdown() {
-      // Set random direction for the ball after countdown
+      // Set random direction for the ball after countdown - FIXED: Now properly starts moving
       game.ball.dx = Math.random() > 0.5 ? game.ball.speed * 0.6 : -game.ball.speed * 0.6;
       game.ball.dy = (Math.random() * 2 - 1) * game.ball.speed * 0.6;
+      
+      // Ensure ball speed is set
+      game.ball.speed = game.isFourPlayer ? FOUR_PLAYER_BALL_SPEED : INITIAL_BALL_SPEED;
+      game.ball.originalSpeed = game.ball.speed;
     }
 
     function resetPaddles() {
@@ -2549,12 +2562,10 @@
         game.ball.dy = -Math.abs(game.ball.dy);
       }
       
-      game.ball.x += game.ball.dx * speedFactor;
-      game.ball.y += game.ball.dy * speedFactor;
-
-      // Ball collision with top and bottom
-      if (game.ball.y - game.ballRadius < 0 || game.ball.y + game.ballRadius > canvas.height) {
-        game.ball.dy = -game.ball.dy;
+      // FIXED: Ball only moves when game is active (after countdown)
+      if (game.gameActive) {
+        game.ball.x += game.ball.dx * speedFactor;
+        game.ball.y += game.ball.dy * speedFactor;
       }
     }
 
@@ -3383,6 +3394,7 @@
       document.getElementById('fullscreenButton').style.display = "flex";
       document.getElementById('musicMuteButton').style.display = "flex";
       document.getElementById('backButton').style.display = "flex";
+      document.getElementById('whatsNewButton').style.display = "none";
       
       // Show mobile controls if on mobile
       if (/Mobi|Android/i.test(navigator.userAgent)) {
@@ -3574,49 +3586,48 @@
     }
 
     function startCountdown() {
-  game.countdownActive = true;
-  game.gameActive = false; // Game not active during countdown
-  const countdownElement = document.getElementById('countdown');
-  const goTextElement = document.getElementById('goText');
-  
-  if (countdownElement) {
-    countdownElement.style.display = 'flex';
-    countdownElement.textContent = '3';
-  }
-  
-  let count = 3;
-  game.countdownInterval = setInterval(() => {
-    if (countdownElement) {
-      if (count > 1) {
-        countdownElement.textContent = count - 1;
-        playSelectSound();
-      } else if (count === 1) {
-        countdownElement.style.display = 'none';
-        if (goTextElement) {
-          goTextElement.style.display = 'flex';
-          playSelectSound();
-        }
-      } else {
-        if (goTextElement) {
-          goTextElement.style.display = 'none';
-        }
-        clearInterval(game.countdownInterval);
-        game.countdownActive = false;
-        game.gameActive = true; // Game is now active!
-        
-        // FIX: Start the ball moving after countdown
-        game.ball.dx = Math.random() > 0.5 ? game.ball.speed * 0.6 : -game.ball.speed * 0.6;
-        game.ball.dy = (Math.random() * 2 - 1) * game.ball.speed * 0.6;
-        
-        // Start the game after countdown
-        if (!game.isPaused) {
-          game.gameStarted = true;
-        }
+      game.countdownActive = true;
+      game.gameActive = false; // Game not active during countdown
+      const countdownElement = document.getElementById('countdown');
+      const goTextElement = document.getElementById('goText');
+      
+      if (countdownElement) {
+        countdownElement.style.display = 'flex';
+        countdownElement.textContent = '3';
       }
+      
+      let count = 3;
+      game.countdownInterval = setInterval(() => {
+        if (countdownElement) {
+          if (count > 1) {
+            countdownElement.textContent = count - 1;
+            playSelectSound();
+          } else if (count === 1) {
+            countdownElement.style.display = 'none';
+            if (goTextElement) {
+              goTextElement.style.display = 'flex';
+              playSelectSound();
+            }
+          } else {
+            if (goTextElement) {
+              goTextElement.style.display = 'none';
+            }
+            clearInterval(game.countdownInterval);
+            game.countdownActive = false;
+            game.gameActive = true; // Game is now active!
+            
+            // FIXED: Start the ball movement after "GO!" disappears
+            startBallAfterCountdown();
+            
+            // Start the game after countdown
+            if (!game.isPaused) {
+              game.gameStarted = true;
+            }
+          }
+        }
+        count--;
+      }, 1000);
     }
-    count--;
-  }, 1000);
-}
 
     function startTimer() {
       if (game.timerInterval) {
@@ -3941,5 +3952,3 @@
   </script>
 </body>
 </html>
-
-
