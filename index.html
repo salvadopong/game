@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>🏆 PONG CHAMPIONSHIP 3.0.2 🏆</title>
+  <title>🏆 PONG CHAMPIONSHIP 3.1 🏆</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
@@ -101,6 +101,19 @@
       font-size: 1rem;
       text-shadow: 1px 1px 2px black;
       z-index: 30;
+      display: none;
+    }
+    
+    #pointPrevention {
+      position: absolute;
+      top: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #ff6b6b;
+      font-size: 1rem;
+      text-shadow: 1px 1px 2px black;
+      z-index: 30;
+      font-weight: bold;
       display: none;
     }
     
@@ -908,6 +921,7 @@
       #timer { font-size: 1.5rem; top: 15px; }
       #bonusPoints { font-size: 1rem; top: 50px; }
       #matchInfo { font-size: 0.9rem; top: 80px; }
+      #pointPrevention { font-size: 0.9rem; top: 110px; }
       #commentary { 
         font-size: 1rem; 
         padding: 8px 15px; 
@@ -1026,13 +1040,14 @@
       #introText {
         font-size: 1.8rem;
       }
+      #pointPrevention { top: 100px; font-size: 0.8rem; }
     }
   </style>
 </head>
 <body>
   <!-- Intro Animation Screen -->
   <div id="introAnimation">
-    <div id="introText">PONG CHAMPIONSHIP 3.0</div>
+    <div id="introText">PONG CHAMPIONSHIP 3.1</div>
     <button id="startButton">START</button>
   </div>
 
@@ -1045,7 +1060,8 @@
     <div id="timer">1:30.000</div>
     <div id="bonusPoints"></div>
     <div id="matchInfo"></div>
-    <div id="commentary">WELCOME TO THE PONG CHAMPIONSHIP 3.0!</div>
+    <div id="pointPrevention"></div>
+    <div id="commentary">WELCOME TO THE PONG CHAMPIONSHIP 3.1!</div>
     
     <!-- Power charge bars - now properly separated -->
     <div id="leftChargeContainer" class="paddle-charge-container">
@@ -1107,7 +1123,7 @@
     </div>
 
     <div id="titleScreen" class="screen">
-      <h1>🏆 PONG CHAMPIONSHIP 3.0.2 🏆</h1>
+      <h1>🏆 PONG CHAMPIONSHIP 3.1 🏆</h1>
       <button class="btn-championship" id="twoPlayerButton">2 PLAYERS</button>
       <button class="btn-championship" id="singlePlayerButton">1 PLAYER VS BOT</button>
       <button class="btn-championship" id="fourPlayerButton">4 PLAYERS</button>
@@ -1159,8 +1175,11 @@
   <!-- Whats New Modal -->
   <div id="whatsNewModal">
     <div id="whatsNewContent">
-      <h2>What's New in Pong Championship 3.0</h2>
+      <h2>What's New in Pong Championship 3.1</h2>
       <ul>
+        <li><strong>NEW FEATURE:</strong> 10-second point prevention system at game start and after halftime</li>
+        <li><strong>VISUAL INDICATOR:</strong> Point prevention timer shown on screen</li>
+        <li><strong>IMPROVED GAMEPLAY:</strong> No points counted during the first 10 seconds of each half</li>
         <li><strong>BUG FIX:</strong> Fixed random point scoring at game start, halftime, and extra time</li>
         <li><strong>IMPROVED OVERTIME SYSTEM:</strong> Multiple overtime periods (30s, 60s, 90s, 120s) for draws</li>
         <li><strong>ENHANCED LEADERBOARDS:</strong> Winners highlighted in gold, losers in red</li>
@@ -1174,7 +1193,7 @@
   </div>
 
   <!-- Whats New Button is now positioned outside of screens -->
-  <button id="whatsNewButton">ℹ️ What's New in 3.0</button>
+  <button id="whatsNewButton">ℹ️ What's New in 3.1</button>
 
   <div id="twoPlayerPrompt" class="modal-overlay" style="display: none;">
     <div class="modal-content">
@@ -1325,6 +1344,11 @@
         <p>• First to 10 points wins (with bonus points in deuce situations)</p>
         <p>• If time runs out, player with most points wins</p>
         <p>• In case of draw, multiple overtime periods (30s, 60s, 90s, 120s)</p>
+        
+        <h3>NEW IN 3.1:</h3>
+        <p>• 10-second point prevention at start of game and after halftime</p>
+        <p>• No points counted during first 10 seconds of each half</p>
+        <p>• Visual indicator shows remaining prevention time</p>
       </div>
       <div style="display: flex; justify-content: center; gap: 10px; margin-top: 15px;">
         <button class="modal-btn" id="closeTutorial">CLOSE</button>
@@ -1375,6 +1399,9 @@
     const SMASH_DURATION = 800;
     const CHARGE_TIME = 4000;
     const POWER_SHOT_DURATION = 3000;
+    
+    // NEW IN 3.1: Point prevention system
+    const POINT_PREVENTION_TIME = 10; // 10 seconds of point prevention
     
     // Game Elements
     const canvas = document.getElementById('pongCanvas');
@@ -1505,7 +1532,11 @@
       // IMPROVEMENT #1: Track if ball has been served to prevent random points
       ballServed: false,
       // IMPROVEMENT #2: Track if game ended by time
-      endedByTime: false
+      endedByTime: false,
+      // NEW IN 3.1: Point prevention system
+      pointPreventionActive: true,
+      pointPreventionTime: POINT_PREVENTION_TIME,
+      pointPreventionInterval: null
     };
 
     // Commentary phrases
@@ -2322,6 +2353,74 @@
       }
     }
 
+    // NEW IN 3.1: Start point prevention system
+    function startPointPrevention() {
+      game.pointPreventionActive = true;
+      game.pointPreventionTime = POINT_PREVENTION_TIME;
+      
+      // Show point prevention indicator
+      const pointPreventionElement = document.getElementById('pointPrevention');
+      if (pointPreventionElement) {
+        pointPreventionElement.style.display = 'block';
+        pointPreventionElement.textContent = `POINT PREVENTION: ${game.pointPreventionTime} SECS`;
+      }
+      
+      // Queue commentary about point prevention
+      if (!game.isPracticeMode && !game.isEndlessMode) {
+        queueCommentary("POINT PREVENTION ACTIVE FOR 10 SECONDS!", true);
+      }
+      
+      // Start point prevention timer
+      game.pointPreventionInterval = setInterval(() => {
+        if (!game.isPaused && !game.halftimeActive && game.gameActive) {
+          game.pointPreventionTime--;
+          
+          // Update display
+          const pointPreventionElement = document.getElementById('pointPrevention');
+          if (pointPreventionElement) {
+            pointPreventionElement.textContent = `POINT PREVENTION: ${game.pointPreventionTime} SECS`;
+            
+            // Flash red when about to end
+            if (game.pointPreventionTime <= 3) {
+              pointPreventionElement.style.color = '#ff0000';
+              pointPreventionElement.style.animation = 'pulse 0.5s infinite alternate';
+            } else {
+              pointPreventionElement.style.color = '#ff6b6b';
+              pointPreventionElement.style.animation = '';
+            }
+          }
+          
+          // When time reaches 0, end point prevention
+          if (game.pointPreventionTime <= 0) {
+            endPointPrevention();
+          }
+        }
+      }, 1000);
+    }
+
+    // NEW IN 3.1: End point prevention system
+    function endPointPrevention() {
+      game.pointPreventionActive = false;
+      
+      // Clear the interval
+      if (game.pointPreventionInterval) {
+        clearInterval(game.pointPreventionInterval);
+        game.pointPreventionInterval = null;
+      }
+      
+      // Hide point prevention indicator
+      const pointPreventionElement = document.getElementById('pointPrevention');
+      if (pointPreventionElement) {
+        pointPreventionElement.style.display = 'none';
+        pointPreventionElement.style.animation = '';
+      }
+      
+      // Queue commentary about point prevention ending
+      if (!game.isPracticeMode && !game.isEndlessMode) {
+        queueCommentary("POINT PREVENTION ENDED! POINTS NOW COUNT!", true);
+      }
+    }
+
     function startLeftCharge() {
       if (game.leftChargeInterval) clearInterval(game.leftChargeInterval);
       
@@ -2906,9 +3005,11 @@
     }
     
     // Ball out of bounds - scoring
+    // NEW IN 3.1: Check if point prevention is active before scoring
     if (game.ball.x - game.ballRadius < 0) {
       // IMPROVEMENT #1: Only score if ball has been served
-      if (game.ballServed) {
+      // NEW IN 3.1: Check if point prevention is active
+      if (game.ballServed && !game.pointPreventionActive) {
         if (!game.isPracticeMode && !game.isEndlessMode) {
           game.rightPaddle.score++;
           document.getElementById('rightScore').textContent = game.rightPaddle.score;
@@ -2929,6 +3030,11 @@
           resetBall();
           game.ball.dx = -Math.abs(game.ball.dx);
         }
+      } else if (game.ballServed && game.pointPreventionActive) {
+        // NEW IN 3.1: Point prevention active - don't count points, just reset ball
+        resetBall();
+        game.ball.dx = -Math.abs(game.ball.dx);
+        queueCommentary("POINT PREVENTION ACTIVE! NO POINT AWARDED!", true);
       } else {
         // IMPROVEMENT #1: If ball goes out before being served, just reset it
         resetBall();
@@ -2937,7 +3043,8 @@
 
     if (game.ball.x + game.ballRadius > canvas.width) {
       // IMPROVEMENT #1: Only score if ball has been served
-      if (game.ballServed) {
+      // NEW IN 3.1: Check if point prevention is active
+      if (game.ballServed && !game.pointPreventionActive) {
         if (!game.isPracticeMode && !game.isEndlessMode) {
           game.leftPaddle.score++;
           document.getElementById('leftScore').textContent = game.leftPaddle.score;
@@ -2958,6 +3065,11 @@
             queueCommentary("Great! Now try again!", true);
           }
         }
+      } else if (game.ballServed && game.pointPreventionActive) {
+        // NEW IN 3.1: Point prevention active - don't count points, just reset ball
+        resetBall();
+        game.ball.dx = Math.abs(game.ball.dx);
+        queueCommentary("POINT PREVENTION ACTIVE! NO POINT AWARDED!", true);
       } else {
         // IMPROVEMENT #1: If ball goes out before being served, just reset it
         resetBall();
@@ -3371,6 +3483,14 @@
       game.lastTimerUpdate = Date.now(); // Initialize timer
       game.ballServed = false; // Reset ball served flag
       
+      // NEW IN 3.1: Reset point prevention
+      game.pointPreventionActive = true;
+      game.pointPreventionTime = POINT_PREVENTION_TIME;
+      if (game.pointPreventionInterval) {
+        clearInterval(game.pointPreventionInterval);
+        game.pointPreventionInterval = null;
+      }
+      
       // Reset charge bars
       game.leftCharge = 0;
       game.rightCharge = 0;
@@ -3399,24 +3519,28 @@
         document.getElementById('timer').style.display = "block";
         document.getElementById('bonusPoints').style.display = "block";
         document.getElementById('matchInfo').style.display = "block";
+        document.getElementById('pointPrevention').style.display = "block";
       } else if (game.isEndlessMode && game.showScore) {
         document.getElementById('leftScore').style.display = "block";
         document.getElementById('rightScore').style.display = "block";
         document.getElementById('timer').style.display = "none";
         document.getElementById('bonusPoints').style.display = "none";
         document.getElementById('matchInfo').style.display = "none";
+        document.getElementById('pointPrevention').style.display = "none";
       } else if (game.isPracticeMode) {
         document.getElementById('leftScore').style.display = "block";
         document.getElementById('rightScore').style.display = "none";
         document.getElementById('timer').style.display = "none";
         document.getElementById('bonusPoints').style.display = "none";
         document.getElementById('matchInfo').style.display = "none";
+        document.getElementById('pointPrevention').style.display = "none";
       } else {
         document.getElementById('leftScore').style.display = "none";
         document.getElementById('rightScore').style.display = "none";
         document.getElementById('timer').style.display = "none";
         document.getElementById('bonusPoints').style.display = "none";
         document.getElementById('matchInfo').style.display = "none";
+        document.getElementById('pointPrevention').style.display = "none";
       }
       
       // Hide menu screens
@@ -3433,6 +3557,7 @@
         document.getElementById('timer').textContent = "1:30.000";
         document.getElementById('bonusPoints').textContent = "";
         document.getElementById('matchInfo').textContent = "1st Half | Extra Time: +0s";
+        document.getElementById('pointPrevention').textContent = `POINT PREVENTION: ${game.pointPreventionTime} SECS`;
       }
       
       resetBall();
@@ -3497,6 +3622,11 @@
         startTimer();
       }
       
+      // NEW IN 3.1: Start point prevention system
+      if (!game.isPracticeMode && !game.isEndlessMode) {
+        startPointPrevention();
+      }
+      
       // Start countdown - ball won't move until countdown finishes
       startCountdown();
       
@@ -3552,6 +3682,12 @@
           game.timerInterval = null;
         }
         
+        // Stop point prevention timer
+        if (game.pointPreventionInterval) {
+          clearInterval(game.pointPreventionInterval);
+          game.pointPreventionInterval = null;
+        }
+        
         // Show pause screen
         document.getElementById('pauseScreen').style.display = 'flex';
         
@@ -3570,6 +3706,35 @@
         // Resume timer if needed
         if (!game.isPracticeMode && !game.isEndlessMode && !game.timerInterval) {
           startTimer();
+        }
+        
+        // Resume point prevention timer if needed
+        if (!game.isPracticeMode && !game.isEndlessMode && game.pointPreventionActive && !game.pointPreventionInterval) {
+          game.pointPreventionInterval = setInterval(() => {
+            if (!game.isPaused && !game.halftimeActive && game.gameActive) {
+              game.pointPreventionTime--;
+              
+              // Update display
+              const pointPreventionElement = document.getElementById('pointPrevention');
+              if (pointPreventionElement) {
+                pointPreventionElement.textContent = `POINT PREVENTION: ${game.pointPreventionTime} SECS`;
+                
+                // Flash red when about to end
+                if (game.pointPreventionTime <= 3) {
+                  pointPreventionElement.style.color = '#ff0000';
+                  pointPreventionElement.style.animation = 'pulse 0.5s infinite alternate';
+                } else {
+                  pointPreventionElement.style.color = '#ff6b6b';
+                  pointPreventionElement.style.animation = '';
+                }
+              }
+              
+              // When time reaches 0, end point prevention
+              if (game.pointPreventionTime <= 0) {
+                endPointPrevention();
+              }
+            }
+          }, 1000);
         }
         
         // Hide pause screen
@@ -3610,6 +3775,12 @@
         game.rightChargeInterval = null;
       }
       
+      // NEW IN 3.1: Stop point prevention interval
+      if (game.pointPreventionInterval) {
+        clearInterval(game.pointPreventionInterval);
+        game.pointPreventionInterval = null;
+      }
+      
       // Reset game state
       game.gameStarted = false;
       game.gameActive = false;
@@ -3619,6 +3790,7 @@
       game.isPracticeMode = false;
       game.isEndlessMode = false;
       game.endedByTime = false;
+      game.pointPreventionActive = false;
       
       // Stop music and commentary
       backgroundMusic.pause();
@@ -3631,6 +3803,7 @@
       document.getElementById('timer').style.display = 'none';
       document.getElementById('bonusPoints').style.display = 'none';
       document.getElementById('matchInfo').style.display = 'none';
+      document.getElementById('pointPrevention').style.display = 'none';
       document.getElementById('commentary').style.display = 'none';
       document.getElementById('pauseScreen').style.display = 'none';
       document.getElementById('endScreen').style.display = 'none';
@@ -3763,6 +3936,11 @@
       game.ballServed = false; // Reset ball served flag
       clearInterval(game.timerInterval);
       
+      // NEW IN 3.1: End point prevention if active
+      if (game.pointPreventionActive) {
+        endPointPrevention();
+      }
+      
       const halftimeScreen = document.getElementById('halftimeScreen');
       if (halftimeScreen) {
         halftimeScreen.style.display = 'flex';
@@ -3792,6 +3970,23 @@
         // Update match info
         document.getElementById('matchInfo').textContent = `2nd Half | ${game.tournamentStage} | Extra Time: +${game.extraTime}s`;
         
+        // NEW IN 3.1: Reset point prevention for second half
+        game.pointPreventionActive = true;
+        game.pointPreventionTime = POINT_PREVENTION_TIME;
+        if (game.pointPreventionInterval) {
+          clearInterval(game.pointPreventionInterval);
+          game.pointPreventionInterval = null;
+        }
+        
+        // Show point prevention indicator
+        const pointPreventionElement = document.getElementById('pointPrevention');
+        if (pointPreventionElement) {
+          pointPreventionElement.style.display = 'block';
+          pointPreventionElement.textContent = `POINT PREVENTION: ${game.pointPreventionTime} SECS`;
+          pointPreventionElement.style.color = '#ff6b6b';
+          pointPreventionElement.style.animation = '';
+        }
+        
         // Reset ball and paddles
         resetBall();
         resetPaddles();
@@ -3807,6 +4002,13 @@
         // Start timer again after countdown
         setTimeout(() => {
           startTimer();
+        }, 4000);
+        
+        // NEW IN 3.1: Start point prevention for second half
+        setTimeout(() => {
+          if (!game.isPracticeMode && !game.isEndlessMode) {
+            startPointPrevention();
+          }
         }, 4000);
         
         // Commentary for second half
@@ -3978,6 +4180,12 @@
       if (game.rightChargeInterval) {
         clearInterval(game.rightChargeInterval);
         game.rightChargeInterval = null;
+      }
+      
+      // NEW IN 3.1: Stop point prevention interval
+      if (game.pointPreventionInterval) {
+        clearInterval(game.pointPreventionInterval);
+        game.pointPreventionInterval = null;
       }
       
       // Stop game loop and commentary
